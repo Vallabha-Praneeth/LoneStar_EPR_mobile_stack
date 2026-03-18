@@ -1,0 +1,19 @@
+appId: ${APP_ID}
+tags:
+  - util
+env:
+  USERNAME: driver1
+  PASSWORD: DriverPass123!
+---
+# Taps the login form and submits credentials.
+# Only call this flow when "Sign In" is already visible.
+- tapOn:
+    id: username-input
+- inputText: ${USERNAME}
+- tapOn:
+    id: password-input
+- inputText: ${PASSWORD}
+- runFlow: ./hide-keyboard.yaml
+- tapOn:
+    id: login-button
+- assertVisible: My Campaign

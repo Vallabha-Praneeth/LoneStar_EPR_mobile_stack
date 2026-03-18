@@ -1,0 +1,63 @@
+appId: ${APP_ID}
+env:
+  USERNAME: driver1
+  PASSWORD: DriverPass123!
+---
+# Full driver shift happy path:
+# clearState → login → start shift → upload photo → back → end shift → sign out
+
+# Clear all local app state (MMKV session, etc.) for a clean run
+- clearState
+
+- launchApp
+
+# Login — always required after clearState since MMKV session is gone
+- assertVisible: Sign In
+- runFlow: ../utils/driver-login.yaml
+
+# Campaign screen — handle case where a previous unclosed shift exists in the DB.
+# If "Start Shift" is visible we're in a clean state. If not, an active shift
+# already exists and the buttons are already in active mode.
+- runFlow:
+    when:
+      visible: "▶ Start Shift"
+    commands:
+      - tapOn: "▶ Start Shift"
+
+# Confirm shift is active (End Shift button is now visible)
+- assertVisible: "⏹ End Shift"
+
+# Navigate to upload screen
+- tapOn: "📷 Upload Photo"
+- assertVisible: Upload Photo
+
+# Open gallery (camera is unavailable in simulator — the app auto-redirects)
+- tapOn: "🖼 Gallery"
+
+# Grant photo library permission if the system dialog appears
+- runFlow:
+    when:
+      visible: "Allow Full Access"
+    commands:
+      - tapOn: "Allow Full Access"
+
+# Tap the first photo in the system photo picker.
+# iPhone 16e logical resolution: 390 × 844 pt.
+# First photo in the top-left of the grid is at approx (97, 170) → ~25%, ~20%.
+- tapOn:
+    point: "25%, 20%"
+
+# Wait for photo preview to load, then submit
+- assertVisible: "↑ Submit Photo"
+- tapOn: "↑ Submit Photo"
+
+# Upload success screen
+- assertVisible: "Photo Submitted"
+- tapOn: "Back to Campaign"
+
+# Back on campaign screen — shift still active
+- assertVisible: "⏹ End Shift"
+
+# End shift — triggers signOut, redirects to login screen
+- tapOn: "⏹ End Shift"
+- assertVisible: "Sign In"
