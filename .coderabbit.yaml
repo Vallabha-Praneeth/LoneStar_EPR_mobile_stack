@@ -1,0 +1,95 @@
+# CodeRabbit configuration for adtruck-driver-native
+# React Native / Expo driver app — AdTruck campaign proof system
+
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+
+  path_filters:
+    - "!docs/**"
+    - "!.maestro/**"
+    - "!assets/**"
+    - "!.cursor/**"
+
+  path_instructions:
+    - path: "src/features/driver/**"
+      instructions: |
+        This is the core driver flow: campaign-screen, upload-screen, upload-success-screen.
+        Check that:
+        - date-fns format strings use v1 tokens ONLY: D (day of month), YYYY (year), h (12h), a (AM/PM).
+          WRONG: format(date, 'MMMM d, yyyy') — d and yyyy are v2/v3 tokens.
+          CORRECT: format(new Date(dateStr + 'T12:00:00'), 'MMMM D, YYYY') — note T12:00:00 noon anchor.
+        - Date strings from Supabase (campaign_date: 'YYYY-MM-DD') must have T12:00:00 appended before
+          passing to new Date() to prevent UTC midnight off-by-one in non-UTC timezones.
+        - No AsyncStorage usage. All persistent state uses MMKV via src/lib/storage.tsx.
+        - No expo-secure-store usage (2048-byte limit breaks Supabase JWTs).
+        - Functions stay under 110 lines (max-lines-per-function ESLint rule). Extract sub-components
+          to the same feature folder rather than disabling the rule.
+
+    - path: "src/lib/api/driver/**"
+      instructions: |
+        API functions for driver features.
+        Check that:
+        - Functions with 4+ parameters use an options object (max-params limit is 3).
+          WRONG: async function foo(a: string, b: string, c: string, d: string)
+          CORRECT: async function foo({ a, b, c, d }: FooOptions)
+        - uploadPhoto performs orphan cleanup: if DB insert fails after storage upload,
+          the storage object must be removed before throwing.
+        - All Supabase errors are thrown (not swallowed). Check for bare `if (error) {}`.
+
+    - path: "src/lib/supabase.ts"
+      instructions: |
+        Supabase client with MMKV storage adapter.
+        - MMKV adapter is intentional — do NOT suggest replacing with expo-secure-store
+          (it has a 2048-byte limit that breaks Supabase JWTs).
+        - Session tokens in MMKV is a known, documented workaround. Do not flag as a security issue
+          unless the MMKV instance is missing encryption.
+
+    - path: "src/features/auth/**"
+      instructions: |
+        Auth layer using TanStack Form v1.27 + Zod v4.
+        - Login uses username (not email). The Supabase RPC get_auth_email_by_username translates
+          username → email before calling signInWithPassword.
+        - The `validators: { onChange: schema as any }` cast in login-form.tsx is intentional:
+          Zod v4 + TanStack Form v1.27 have a TypeScript gap at the adapter layer. Do not flag.
+        - form.handleSubmit must be used on onPress (not a direct onSubmit call that bypasses Zod).
+        - Session persistence via MMKV — users should be auto-logged in on cold start.
+
+    - path: "src/lib/api/driver/campaign.ts"
+      instructions: |
+        fetchDriverCampaign uses .gte('campaign_date', today) — this is intentional.
+        The query returns the next upcoming or current campaign, not just today's exact date.
+        Do not suggest changing to .eq().
+
+    - path: ".github/workflows/**"
+      instructions: |
+        CI workflows from the Obytes React Native template.
+        - lint-ts.yml, test.yml, type-check.yml trigger on push/PR to main — this is correct for
+          a standalone repo (no paths: filter needed, unlike a monorepo).
+        - EAS build workflows (eas-build-prod.yml, eas-build-qa.yml) require EAS_TOKEN secret.
+        - Android E2E workflows require macOS runner — this is correct for Android emulator.
+        - No iOS simulator CI currently — iOS testing is done locally via idb.
+
+    - path: "src/app/**"
+      instructions: |
+        Expo Router v6 file-based routing. Routes match the file path exactly.
+        - (app)/ group is the authenticated section — guarded by _layout.tsx session check.
+        - upload-success route is at (app)/upload-success.tsx — navigated to via router.replace.
+        - Do not suggest adding navigation guards inside individual screen components;
+          the layout already handles auth state.
+
+  abort_on_close: true
+
+chat:
+  auto_reply: true

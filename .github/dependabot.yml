@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # npm dependencies (React Native / Expo packages)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    ignore:
+      # date-fns: pinned to v1.30.1 — v2/v3 use different token syntax.
+      # Upgrading requires auditing every format() call. Do not auto-update.
+      - dependency-name: "date-fns"
+        versions: ["2.x", "3.x", "4.x"]
+      # Expo SDK upgrades require coordinated native rebuild — do manually.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
