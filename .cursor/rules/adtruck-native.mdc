@@ -1,0 +1,154 @@
+---
+description: AdTruck Driver Native — Cursor AI persistent rules for the mobile driver app
+alwaysApply: true
+---
+
+# AdTruck Driver Native — Cursor Rules
+
+## What This App Does
+This is a mobile app for truck drivers. Drivers log in with a username + password,
+see their campaign for the day, start their shift, take a photo of their truck with
+ad wrapping, submit it for approval, then end their shift. The app talks to a
+Supabase backend shared with an admin web portal and a client web portal.
+
+## Stack (exact versions matter — do not assume latest)
+- React Native + Expo SDK 54 (managed workflow), TypeScript strict mode
+- Expo Router 6 (file-based routing — folders and files become screens)
+- Supabase (Postgres database + file storage + auth)
+- Zustand (global auth state ONLY — not for server data)
+- TanStack Query v5 (server data fetching and caching)
+- TanStack Form 1.27.7 (forms — do NOT use react-hook-form)
+- MMKV 4.x (local storage — do NOT use AsyncStorage)
+- NativeWind / Tailwind utility classes for styling
+- Package manager: pnpm only (never npm or yarn)
+
+---
+
+## File Layout Rules
+- Screens: `src/features/[feature]/[name]-screen.tsx`
+- Routes: `src/app/` — file name becomes the URL path (Expo Router)
+- API calls: `src/lib/api/driver/` — one file per resource type
+- Types: `src/lib/types.ts` — keep in sync with adtruck-proof-main
+- Always use `@/` absolute imports — never `../` relative imports
+- Never edit `android/` or `ios/` directories directly — use Expo config plugins
+
+---
+
+## date-fns Rules — CRITICAL: THIS IS VERSION 1.30.1, NOT v2 or v3
+
+**v1 tokens (correct for this project):**
+- `D` = day of month (1–31)
+- `YYYY` = calendar year (2026)
+- `Do` = ordinal day (17th)
+- `h` = 12-hour clock, `H` = 24-hour clock
+- `a` = AM/PM
+
+**v2/v3 tokens (WRONG for this project — do not use):**
+- `d` in v2/v3 means day of WEEK, not day of month
+- `yyyy` in v2/v3 is correct year, but `D` in v2/v3 means day of YEAR
+
+**Correct format string example:**
+```ts
+format(new Date(dateStr + 'T12:00:00'), 'MMMM D, YYYY')
+// The T12:00:00 suffix prevents UTC midnight from shifting the date by one day
+```
+
+If upgrading date-fns to v3, ALL format strings must be audited and changed to lowercase tokens.
+
+---
+
+## TanStack Form 1.27 Rules
+```tsx
+// Correct form setup
+const form = useForm({
+  defaultValues: { username: '', password: '' },
+  validators: { onChange: schema as any }, // `as any` is intentional — Zod v4 workaround
+  onSubmit: async ({ value }) => { onSubmit(value); },
+});
+
+// Correct field rendering
+<form.Field name="username" children={field => (
+  <Input value={field.state.value} onChangeText={field.handleChange} />
+)} />
+
+// Correct submit button
+<form.Subscribe selector={state => state.isSubmitting} children={isSubmitting => (
+  <Button onPress={form.handleSubmit} loading={isSubmitting} />
+)} />
+```
+
+- Do NOT bypass `form.handleSubmit` — it runs Zod validation before calling `onSubmit`
+- Do NOT remove the `as any` cast — it is the accepted workaround for Zod v4 + TanStack Form v1.27 TypeScript compatibility
+- Do NOT introduce `react-hook-form` anywhere in this codebase
+
+---
+
+## Auth Rules
+- Session tokens are stored in MMKV via the custom adapter in `src/lib/supabase.ts`
+- Do NOT switch to AsyncStorage or expo-secure-store (secure-store has a 2048-byte size limit that breaks Supabase JWTs)
+- Login flow: username → RPC `get_auth_email_by_username` → `signInWithPassword`
+- Auth state lives in `src/features/auth/use-auth-store.tsx` (Zustand store)
+- Never log JWTs, session tokens, refresh tokens, or passwords — even behind `__DEV__`
+- `hydrateAuth()` is called at module scope in `src/app/_layout.tsx` — do not move it
+
+---
+
+## Expo Image Picker (~17.x) Rules
+```ts
+// Correct — mediaTypes is an array in SDK 50+
+const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 });
+
+// WRONG — old string format, deprecated
+const result = await ImagePicker.launchCameraAsync({ mediaTypes: 'Images' });
+```
+
+- iOS Simulator camera detection (current workaround):
+  `Platform.OS === 'ios' && __DEV__ && !Platform.isPad`
+  This misidentifies iPads in dev mode. Proper fix uses `expo-device` `Device.isDevice === false`.
+  Do not remove this workaround — it prevents simulator crashes.
+- Always call `requestCameraPermissionsAsync()` or `requestMediaLibraryPermissionsAsync()` before every launch
+
+---
+
+## React Query Rules
+- Query keys must include the resource ID: `['driver-campaign', profile?.id]`
+- Always gate queries with `enabled: !!profile?.id` when they depend on auth
+- After every mutation that changes campaign/photo data:
+  `queryClient.invalidateQueries({ queryKey: ['driver-campaign'] })`
+- Never store server state in Zustand — that is exclusively for auth
+
+---
+
+## Styling Rules
+- Use NativeWind Tailwind classes directly on RN components
+- `disabled:opacity-50` works on `TouchableOpacity` via NativeWind
+- Dark mode: use `dark:` prefix classes — do not query `useColorScheme()` per-component
+- Safe area: handled at the screen level via `KeyboardAvoidingView` and `ScrollView` padding — do not hardcode pixel values for notches/home indicators
+
+---
+
+## Test Rules — IMPORTANT: existing tests have known issues
+
+The file `src/features/auth/components/login-form.test.tsx` uses:
+- testID `email-input` — WRONG (actual component uses `username-input`)
+- text "Email is required" — WRONG (actual error is "Username is required")
+- field name `email` in submit assertion — WRONG (actual field is `username`)
+
+**Do not copy patterns from this test file.** All 3 non-trivial tests in it will fail.
+Fix this file before adding new tests — update testIDs and error strings to match the component.
+
+General test rules:
+- testIDs in component and test file must match exactly
+- Never hit real Supabase in Jest — mock `@/lib/supabase`
+- Test what the user sees and does — not internal implementation details
+
+---
+
+## What Not To Do
+- **No OTP login** — project rule, non-negotiable
+- **No AsyncStorage** — use MMKV
+- **No react-hook-form** — use TanStack Form
+- **No `git add .`** — stage specific files only
+- **No `.env` commits**
+- **Do not modify the MMKV adapter in `supabase.ts`** without reading the 2048-byte comment in that file first
+- **Do not use v2/v3 date-fns tokens** — this project is on v1.30.1
