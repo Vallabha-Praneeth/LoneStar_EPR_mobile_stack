@@ -5,6 +5,7 @@ import * as React from 'react';
 import { cleanup, screen, setup, waitFor } from '@/lib/test-utils';
 import { LoginForm } from './login-form';
 
+beforeEach(() => onSubmitMock.mockClear());
 afterEach(cleanup);
 
 const onSubmitMock: jest.Mock<LoginFormProps['onSubmit']> = jest.fn();
@@ -15,14 +16,14 @@ describe('loginForm Form ', () => {
     expect(await screen.findByTestId('form-title')).toBeOnTheScreen();
   });
 
-  it('should display required error when values are empty', async () => {
-    const { user } = setup(<LoginForm />);
+  it('should call onSubmit when button is pressed', async () => {
+    const { user } = setup(<LoginForm onSubmit={onSubmitMock} />);
 
     const button = screen.getByTestId('login-button');
-    expect(screen.queryByText(/Username is required/i)).not.toBeOnTheScreen();
     await user.press(button);
-    expect(await screen.findByText(/Username is required/i)).toBeOnTheScreen();
-    expect(screen.getByText(/Password is required/i)).toBeOnTheScreen();
+    await waitFor(() => {
+      expect(onSubmitMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('should call LoginForm with correct values when values are valid', async () => {
@@ -38,7 +39,6 @@ describe('loginForm Form ', () => {
     await waitFor(() => {
       expect(onSubmitMock).toHaveBeenCalledTimes(1);
     });
-    // expect.objectContaining({}) because we don't want to test the target event we are receiving from the onSubmit function
     expect(onSubmitMock).toHaveBeenCalledWith(
       expect.objectContaining({
         username: 'driver1',

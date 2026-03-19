@@ -38,6 +38,7 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
           <Text className="text-sm font-semibold text-white">📷 Take Photo</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          testID="gallery-button"
           onPress={onGallery}
           className="h-12 flex-1 items-center justify-center rounded-xl border border-gray-300 dark:border-gray-600"
         >
@@ -153,6 +154,7 @@ export function UploadScreen() {
             />
           </View>
           <TouchableOpacity
+            testID="submit-photo-button"
             onPress={() => uploadMutation.mutate()}
             disabled={!imageUri || !campaign || uploadMutation.isPending}
             className="bg-primary h-14 items-center justify-center rounded-xl disabled:opacity-40"

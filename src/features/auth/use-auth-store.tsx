@@ -24,9 +24,9 @@ const _useAuthStore = create<AuthState>(set => ({
     set({ status: 'signIn', session, profile });
   },
 
-  signOut: async () => {
-    await supabase.auth.signOut();
+  signOut: () => {
     set({ status: 'signOut', session: null, profile: null });
+    supabase.auth.signOut().catch(() => {});
   },
 
   hydrate: async () => {

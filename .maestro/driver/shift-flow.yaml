@@ -1,63 +1,109 @@
 appId: ${APP_ID}
 env:
+  APP_ID: com.adtruck-driver-native.development
   USERNAME: driver1
   PASSWORD: DriverPass123!
 ---
 # Full driver shift happy path:
-# clearState → login → start shift → upload photo → back → end shift → sign out
+# launchApp(clearState, isE2E) → login → start shift → upload photo → end shift → sign out
+#
+# Launch notes:
+# - launchApp with clearState: true wipes app state (MMKV session gone → fresh login).
+# - arguments: { isE2E: "true" } is read by react-native-launch-arguments in login-form.tsx
+#   to disable secureTextEntry, allowing Maestro/XCTest to fire onChangeText on the
+#   password field (Maestro issue #1061 — AutoFill popup blocks typeText on secure fields).
+# - In all non-E2E builds the password field is always secure.
+#
+# MMKV is empty after clearState → hydrateAuth → status:signOut → login screen.
+# The splash screen appears frozen on iOS 26 beta (expo-splash-screen compat bug)
+# but the accessibility tree is fully populated, so Maestro can interact normally.
 
-# Clear all local app state (MMKV session, etc.) for a clean run
-- clearState
+- launchApp:
+    appId: ${APP_ID}
+    clearState: true
+    arguments:
+      isE2E: 'true'
 
-- launchApp
+# After clearState the dev-client has no saved Metro URL — send the deep link
+# to reconnect. launchApp is still needed first to inject isE2E before JS starts.
+- openLink: 'exp+obytesapp://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 
-# Login — always required after clearState since MMKV session is gone
-- assertVisible: Sign In
+# Wait for the JS bundle to download and hydrateAuth() to settle.
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 30000
+
+# Login — always required after clearState since MMKV session is wiped.
+- assertVisible:
+    id: login-button
 - runFlow: ../utils/driver-login.yaml
 
 # Campaign screen — handle case where a previous unclosed shift exists in the DB.
-# If "Start Shift" is visible we're in a clean state. If not, an active shift
-# already exists and the buttons are already in active mode.
+# start-shift-button visible → no active shift. If not visible → shift already active.
 - runFlow:
     when:
-      visible: "▶ Start Shift"
+      visible:
+        id: start-shift-button
     commands:
-      - tapOn: "▶ Start Shift"
+      - tapOn:
+          id: start-shift-button
 
-# Confirm shift is active (End Shift button is now visible)
-- assertVisible: "⏹ End Shift"
+# Confirm shift is active (end-shift-button is now visible)
+- assertVisible:
+    id: end-shift-button
 
 # Navigate to upload screen
-- tapOn: "📷 Upload Photo"
+- tapOn:
+    id: upload-photo-button
 - assertVisible: Upload Photo
 
-# Open gallery (camera is unavailable in simulator — the app auto-redirects)
-- tapOn: "🖼 Gallery"
+# Seed a photo into the simulator library before opening the picker.
+# addMedia is Maestro's first-class API for this — no coordinate taps needed.
+- addMedia:
+    - ../test-assets/sample-photo.jpg
 
-# Grant photo library permission if the system dialog appears
+- tapOn:
+    id: gallery-button
+
+# Grant photo library permission if the system dialog appears (first run after clearState).
 - runFlow:
     when:
-      visible: "Allow Full Access"
+      visible: Allow Full Access
     commands:
-      - tapOn: "Allow Full Access"
+      - tapOn: Allow Full Access
 
-# Tap the first photo in the system photo picker.
-# iPhone 16e logical resolution: 390 × 844 pt.
-# First photo in the top-left of the grid is at approx (97, 170) → ~25%, ~20%.
+# Select the first photo — optional: true handles iOS 17/18 element ID differences.
 - tapOn:
-    point: "25%, 20%"
+    id: PXGGridLayout-Info
+    index: 0
+    optional: true
+- tapOn:
+    text: 'Photo, .*'
+    index: 0
+    optional: true
 
-# Wait for photo preview to load, then submit
-- assertVisible: "↑ Submit Photo"
-- tapOn: "↑ Submit Photo"
+# Photo preview loaded — scroll down to reveal submit button below the fold
+- scroll
+# Submit the photo
+- assertVisible:
+    id: submit-photo-button
+- tapOn:
+    id: submit-photo-button
 
 # Upload success screen
-- assertVisible: "Photo Submitted"
-- tapOn: "Back to Campaign"
+- assertVisible: Photo Submitted!
+- tapOn:
+    id: back-to-campaign-button
 
 # Back on campaign screen — shift still active
-- assertVisible: "⏹ End Shift"
+- assertVisible:
+    id: end-shift-button
 
-# End shift — triggers signOut, redirects to login screen
-- tapOn: "⏹ End Shift"
-- assertVisible: "Sign In"
+# End shift — triggers optimistic signOut (local state cleared immediately),
+# then Supabase session revoked in background. Navigation to login is instant.
+- tapOn:
+    id: end-shift-button
+
+- assertVisible:
+    id: login-button

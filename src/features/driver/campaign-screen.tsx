@@ -93,6 +93,7 @@ function ShiftActions({
   if (!activeShift) {
     return (
       <TouchableOpacity
+        testID="start-shift-button"
         onPress={onStartShift}
         disabled={isStartPending}
         className="h-14 items-center justify-center rounded-xl bg-green-500 disabled:opacity-50"
@@ -106,12 +107,14 @@ function ShiftActions({
   return (
     <>
       <TouchableOpacity
+        testID="upload-photo-button"
         onPress={onUploadPhoto}
         className="bg-primary h-14 items-center justify-center rounded-xl"
       >
         <Text className="text-base font-semibold text-white">📷 Upload Photo</Text>
       </TouchableOpacity>
       <TouchableOpacity
+        testID="end-shift-button"
         onPress={onEndShift}
         disabled={isEndPending}
         className="h-14 items-center justify-center rounded-xl border border-red-300 disabled:opacity-50"
