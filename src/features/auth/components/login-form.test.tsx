@@ -5,10 +5,10 @@ import * as React from 'react';
 import { cleanup, screen, setup, waitFor } from '@/lib/test-utils';
 import { LoginForm } from './login-form';
 
+const onSubmitMock: jest.Mock<LoginFormProps['onSubmit']> = jest.fn();
+
 beforeEach(() => onSubmitMock.mockClear());
 afterEach(cleanup);
-
-const onSubmitMock: jest.Mock<LoginFormProps['onSubmit']> = jest.fn();
 
 describe('loginForm Form ', () => {
   it('renders correctly', async () => {
@@ -16,14 +16,18 @@ describe('loginForm Form ', () => {
     expect(await screen.findByTestId('form-title')).toBeOnTheScreen();
   });
 
-  it('should call onSubmit when button is pressed', async () => {
+  it('shows validation errors when submitted with empty fields', async () => {
     const { user } = setup(<LoginForm onSubmit={onSubmitMock} />);
 
     const button = screen.getByTestId('login-button');
     await user.press(button);
+
     await waitFor(() => {
-      expect(onSubmitMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Username is required')).toBeOnTheScreen();
+      expect(screen.getByText('Password is required')).toBeOnTheScreen();
     });
+
+    expect(onSubmitMock).not.toHaveBeenCalled();
   });
 
   it('should call LoginForm with correct values when values are valid', async () => {

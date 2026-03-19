@@ -1,6 +1,8 @@
+import { useForm } from '@tanstack/react-form';
 import * as React from 'react';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { LaunchArguments } from 'react-native-launch-arguments';
+import { z } from 'zod';
 
 import { Button, Input, Text, View } from '@/components/ui';
 
@@ -20,22 +22,19 @@ export type LoginFormProps = {
 // In all other builds (including dev) the field is always secure.
 const isE2E = LaunchArguments.value<{ isE2E?: string }>().isE2E === 'true';
 
-export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
-  const [username, setUsername] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+const usernameSchema = z.string().min(1, 'Username is required');
+const passwordSchema = z.string().min(1, 'Password is required');
 
-  const handleSubmit = async () => {
-    if (isSubmitting)
-      return;
-    setIsSubmitting(true);
-    try {
-      await onSubmit({ username, password });
-    }
-    finally {
-      setIsSubmitting(false);
-    }
-  };
+export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
+  const form = useForm({
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+    onSubmit: async ({ value }) => {
+      await onSubmit(value);
+    },
+  });
 
   return (
     <KeyboardAvoidingView
@@ -56,22 +55,45 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
           </Text>
         </View>
 
-        <Input
-          testID="username-input"
-          label="Username"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={username}
-          onChangeText={setUsername}
-        />
+        <form.Field
+          name="username"
+          validators={{
+            onChange: usernameSchema as any,
+          }}
+        >
+          {field => (
+            <Input
+              testID="username-input"
+              label="Username"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={field.state.value}
+              onChangeText={text => field.handleChange(text)}
+              onBlur={field.handleBlur}
+              error={field.state.meta.errors.length > 0 ? String((field.state.meta.errors[0] as any)?.message ?? field.state.meta.errors[0]) : undefined}
+            />
+          )}
+        </form.Field>
 
-        <Input
-          testID="password-input"
-          label="Password"
-          placeholder="••••••••"
-          secureTextEntry={!isE2E}
-          onChangeText={setPassword}
-        />
+        <form.Field
+          name="password"
+          validators={{
+            onChange: passwordSchema as any,
+          }}
+        >
+          {field => (
+            <Input
+              testID="password-input"
+              label="Password"
+              placeholder="••••••••"
+              secureTextEntry={!isE2E}
+              value={field.state.value}
+              onChangeText={text => field.handleChange(text)}
+              onBlur={field.handleBlur}
+              error={field.state.meta.errors.length > 0 ? String((field.state.meta.errors[0] as any)?.message ?? field.state.meta.errors[0]) : undefined}
+            />
+          )}
+        </form.Field>
 
         {error
           ? (
@@ -79,12 +101,16 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
             )
           : null}
 
-        <Button
-          testID="login-button"
-          label="Sign In"
-          onPress={handleSubmit}
-          loading={isSubmitting}
-        />
+        <form.Subscribe selector={state => [state.isSubmitting]}>
+          {([isSubmitting]) => (
+            <Button
+              testID="login-button"
+              label="Sign In"
+              onPress={form.handleSubmit}
+              loading={isSubmitting}
+            />
+          )}
+        </form.Subscribe>
       </View>
     </KeyboardAvoidingView>
   );
