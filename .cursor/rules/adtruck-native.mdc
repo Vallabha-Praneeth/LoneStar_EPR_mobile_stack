@@ -34,26 +34,24 @@ Supabase backend shared with an admin web portal and a client web portal.
 
 ---
 
-## date-fns Rules — CRITICAL: THIS IS VERSION 1.30.1, NOT v2 or v3
+## date-fns Rules — THIS PROJECT USES VERSION 3 (^3.6.0)
 
-**v1 tokens (correct for this project):**
-- `D` = day of month (1–31)
-- `YYYY` = calendar year (2026)
-- `Do` = ordinal day (17th)
-- `h` = 12-hour clock, `H` = 24-hour clock
-- `a` = AM/PM
-
-**v2/v3 tokens (WRONG for this project — do not use):**
-- `d` in v2/v3 means day of WEEK, not day of month
-- `yyyy` in v2/v3 is correct year, but `D` in v2/v3 means day of YEAR
+**v3 tokens (correct for this project):**
+- `d` = day of month (1–31)
+- `yyyy` = calendar year (2026)
+- `D` in v3 means day of YEAR — do NOT use for day of month
+- `YYYY` in v3 means ISO week-year — do NOT use for calendar year
 
 **Correct format string example:**
 ```ts
-format(new Date(dateStr + 'T12:00:00'), 'MMMM D, YYYY')
+format(new Date(dateStr + 'T12:00:00'), 'MMMM d, yyyy')
 // The T12:00:00 suffix prevents UTC midnight from shifting the date by one day
+// in non-UTC timezones (critical for Supabase date strings like '2026-03-19')
 ```
 
-If upgrading date-fns to v3, ALL format strings must be audited and changed to lowercase tokens.
+**Common mistakes (all produce wrong output in v3):**
+- `format(date, 'MMMM D, YYYY')` — `D` = day of year, `YYYY` = ISO week-year ❌
+- `format(new Date(dateStr), ...)` without `T12:00:00` — UTC midnight shifts date by 1 day ❌
 
 ---
 

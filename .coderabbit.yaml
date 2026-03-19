@@ -27,9 +27,9 @@ reviews:
       instructions: |
         This is the core driver flow: campaign-screen, upload-screen, upload-success-screen.
         Check that:
-        - date-fns format strings use v1 tokens ONLY: D (day of month), YYYY (year), h (12h), a (AM/PM).
-          WRONG: format(date, 'MMMM d, yyyy') — d and yyyy are v2/v3 tokens.
-          CORRECT: format(new Date(dateStr + 'T12:00:00'), 'MMMM D, YYYY') — note T12:00:00 noon anchor.
+        - date-fns format strings use v3 tokens: d (day of month), yyyy (calendar year).
+          WRONG: format(date, 'MMMM D, YYYY') — D = day of year in v3, YYYY = ISO week-year.
+          CORRECT: format(new Date(dateStr + 'T12:00:00'), 'MMMM d, yyyy') — note T12:00:00 noon anchor.
         - Date strings from Supabase (campaign_date: 'YYYY-MM-DD') must have T12:00:00 appended before
           passing to new Date() to prevent UTC midnight off-by-one in non-UTC timezones.
         - No AsyncStorage usage. All persistent state uses MMKV via src/lib/storage.tsx.

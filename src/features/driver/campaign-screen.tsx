@@ -244,7 +244,7 @@ export function CampaignScreen() {
           <View>
             <Text className="text-lg font-semibold">{campaign.title}</Text>
             <Text className="mt-1 text-sm text-gray-500">
-              {format(new Date(`${campaign.campaign_date}T12:00:00`), 'MMMM D, YYYY')}
+              {format(new Date(`${campaign.campaign_date}T12:00:00`), 'MMMM d, yyyy')}
               {campaign.route_code ? ` • Route ${campaign.route_code}` : ''}
             </Text>
           </View>
