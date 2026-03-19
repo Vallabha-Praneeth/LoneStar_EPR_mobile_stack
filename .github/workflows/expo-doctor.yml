@@ -45,7 +45,9 @@ jobs:
         uses: ./.github/actions/setup-node-pnpm-install
 
       - name: Run prebuild
-        run: pnpm run prebuild
+        # iOS-only: Android package names don't allow hyphens (com.adtruck-driver-native)
+        # and this project targets iOS only at this stage.
+        run: pnpm expo prebuild --platform ios --no-install
 
       - name: 🚑 Run Doctor Checks
         run: |

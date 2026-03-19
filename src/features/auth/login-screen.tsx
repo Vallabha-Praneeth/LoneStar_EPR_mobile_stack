@@ -1,6 +1,7 @@
 import type { LoginFormProps } from './components/login-form';
 
 import type { Profile } from '@/lib/types';
+import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { FocusAwareStatusBar } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
@@ -9,6 +10,7 @@ import { useAuthStore } from './use-auth-store';
 
 export function LoginScreen() {
   const signIn = useAuthStore.use.signIn();
+  const router = useRouter();
   const [error, setError] = React.useState<string | null>(null);
 
   const onSubmit: LoginFormProps['onSubmit'] = async ({ username, password }) => {
@@ -47,6 +49,7 @@ export function LoginScreen() {
       }
 
       signIn(data.session, profile as Profile);
+      router.replace('/(app)');
     }
     catch {
       setError('Something went wrong. Please try again.');

@@ -11,7 +11,7 @@ type AuthState = {
   profile: Profile | null;
   status: 'idle' | 'signOut' | 'signIn';
   signIn: (session: Session, profile: Profile) => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   hydrate: () => void;
 };
 
@@ -25,8 +25,8 @@ const _useAuthStore = create<AuthState>(set => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
     set({ status: 'signOut', session: null, profile: null });
+    await supabase.auth.signOut();
   },
 
   hydrate: async () => {
@@ -61,5 +61,5 @@ const _useAuthStore = create<AuthState>(set => ({
 
 export const useAuthStore = createSelectors(_useAuthStore);
 
-export const signOut = () => _useAuthStore.getState().signOut();
+export const signOut = () => _useAuthStore.getState().signOut() as Promise<void>;
 export const hydrateAuth = () => _useAuthStore.getState().hydrate();

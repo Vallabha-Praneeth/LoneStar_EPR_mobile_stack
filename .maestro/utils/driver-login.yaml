@@ -2,6 +2,7 @@ appId: ${APP_ID}
 tags:
   - util
 env:
+  APP_ID: com.adtruck-driver-native.development
   USERNAME: driver1
   PASSWORD: DriverPass123!
 ---
@@ -16,4 +17,15 @@ env:
 - runFlow: ./hide-keyboard.yaml
 - tapOn:
     id: login-button
+# iOS may show a "Save Password?" keychain sheet after login. Dismiss it so
+# assertions on the campaign screen aren't blocked by the overlay.
+- runFlow:
+    when:
+      visible: Not Now
+    commands:
+      - tapOn: Not Now
+# Login involves two Supabase network calls (RPC + signIn). Allow up to 20s.
+- extendedWaitUntil:
+    visible: My Campaign
+    timeout: 20000
 - assertVisible: My Campaign

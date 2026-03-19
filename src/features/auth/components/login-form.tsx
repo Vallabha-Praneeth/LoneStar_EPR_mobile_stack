@@ -1,40 +1,41 @@
-import { useForm } from '@tanstack/react-form';
-
 import * as React from 'react';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import * as z from 'zod';
+import { LaunchArguments } from 'react-native-launch-arguments';
 
 import { Button, Input, Text, View } from '@/components/ui';
-import { getFieldError } from '@/components/ui/form-utils';
 
-const schema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z
-    .string()
-    .min(1, 'Password is required')
-    .min(6, 'Password must be at least 6 characters'),
-});
-
-export type FormType = z.infer<typeof schema>;
+export type FormType = {
+  username: string;
+  password: string;
+};
 
 export type LoginFormProps = {
   onSubmit?: (data: FormType) => void;
   error?: string | null;
 };
 
+// secureTextEntry blocks XCTest from firing onChangeText via the UIKit delegate
+// path (Maestro issue #1061). When launched with isE2E="true" via launchApp
+// arguments, disable secure entry so Maestro can type the password normally.
+// In all other builds (including dev) the field is always secure.
+const isE2E = LaunchArguments.value<{ isE2E?: string }>().isE2E === 'true';
+
 export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
-  const form = useForm({
-    defaultValues: {
-      username: '',
-      password: '',
-    },
-    validators: {
-      onChange: schema as any,
-    },
-    onSubmit: async ({ value }) => {
-      onSubmit(value);
-    },
-  });
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (isSubmitting)
+      return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ username, password });
+    }
+    finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -55,36 +56,21 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
           </Text>
         </View>
 
-        <form.Field
-          name="username"
-          children={field => (
-            <Input
-              testID="username-input"
-              label="Username"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChangeText={field.handleChange}
-              error={getFieldError(field)}
-            />
-          )}
+        <Input
+          testID="username-input"
+          label="Username"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={username}
+          onChangeText={setUsername}
         />
 
-        <form.Field
-          name="password"
-          children={field => (
-            <Input
-              testID="password-input"
-              label="Password"
-              placeholder="••••••••"
-              secureTextEntry
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChangeText={field.handleChange}
-              error={getFieldError(field)}
-            />
-          )}
+        <Input
+          testID="password-input"
+          label="Password"
+          placeholder="••••••••"
+          secureTextEntry={!isE2E}
+          onChangeText={setPassword}
         />
 
         {error
@@ -93,16 +79,11 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
             )
           : null}
 
-        <form.Subscribe
-          selector={state => state.isSubmitting}
-          children={isSubmitting => (
-            <Button
-              testID="login-button"
-              label="Sign In"
-              onPress={form.handleSubmit}
-              loading={isSubmitting}
-            />
-          )}
+        <Button
+          testID="login-button"
+          label="Sign In"
+          onPress={handleSubmit}
+          loading={isSubmitting}
         />
       </View>
     </KeyboardAvoidingView>

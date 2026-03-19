@@ -2,7 +2,6 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
 import FlashMessage from 'react-native-flash-message';
@@ -25,13 +24,10 @@ export const unstable_settings = {
 
 hydrateAuth();
 loadSelectedTheme();
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-// Set the animation options. This is optional.
-SplashScreen.setOptions({
-  duration: 500,
-  fade: true,
-});
+// iOS 26 beta: SplashScreen.hideAsync() is broken — preventAutoHideAsync causes
+// the splash to freeze permanently. Skip it so iOS auto-hides after first render.
+// SplashScreen.preventAutoHideAsync();
+// SplashScreen.setOptions({ duration: 500, fade: true });
 
 export default function RootLayout() {
   return (

@@ -29,6 +29,7 @@ export function UploadSuccessScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="back-to-campaign-button"
             onPress={() => router.replace('/(app)/')}
             className="h-12 items-center justify-center rounded-xl border border-gray-300 dark:border-gray-600"
           >
