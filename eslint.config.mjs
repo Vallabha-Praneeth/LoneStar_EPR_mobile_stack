@@ -40,6 +40,10 @@ export default antfu(
       'cli/',
       'expo-env.d.ts',
       'migration/*',
+      'uniwind-types.d.ts',
+      '.maestro/**',
+      '.github/**',
+      '.coderabbit.yaml',
     ],
   },
 
