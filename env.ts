@@ -34,9 +34,9 @@ const BUNDLE_IDS = {
 } as const;
 
 const PACKAGES = {
-  development: 'com.adtruck-driver-native.development',
-  preview: 'com.adtruck-driver-native.preview',
-  production: 'com.adtruck-driver-native',
+  development: 'com.adtruck_driver_native.development',
+  preview: 'com.adtruck_driver_native.preview',
+  production: 'com.adtruck_driver_native',
 } as const;
 
 const SCHEMES = {
