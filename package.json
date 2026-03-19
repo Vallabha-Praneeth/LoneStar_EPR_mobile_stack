@@ -56,7 +56,6 @@
     "@tanstack/zod-form-adapter": "^0.42.1",
     "app-icon-badge": "^0.1.2",
     "axios": "^1.13.6",
-
     "expo": "~54.0.33",
     "date-fns": "^3.6.0",
     "expo-asset": "~12.0.12",
@@ -154,7 +153,9 @@
     "install": {
       "exclude": [
         "eslint-config-expo",
-        "react-native-worklets"
+        "react-native-worklets",
+        "react-native-reanimated",
+        "@shopify/flash-list"
       ]
     }
   },
