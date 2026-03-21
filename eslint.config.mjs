@@ -44,8 +44,8 @@ export default antfu(
       'uniwind-types.d.ts',
       // YAML files (Maestro E2E, dependabot, coderabbit) use GitHub/tool conventions
       // that conflict with the yaml/quotes rule enforced by antfu preset
-      '.maestro/**',
-      '.github/**',
+      '.maestro/**/*.{yml,yaml}',
+      '.github/**/*.{yml,yaml}',
       '.coderabbit.yaml',
     ],
   },
