@@ -2,6 +2,7 @@
 import Svg from 'react-native-svg';
 import { withUniwind } from 'uniwind';
 
+export * from './badge';
 export * from './button';
 export * from './card';
 export * from './checkbox';

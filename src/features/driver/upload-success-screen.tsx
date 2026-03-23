@@ -23,7 +23,7 @@ export function UploadSuccessScreen() {
         <View className="mt-2 w-full gap-3">
           <TouchableOpacity
             onPress={() => router.replace('/(app)/upload')}
-            className="bg-primary h-12 items-center justify-center rounded-xl"
+            className="h-12 items-center justify-center rounded-xl bg-primary"
           >
             <Text className="font-semibold text-white">Upload Another</Text>
           </TouchableOpacity>

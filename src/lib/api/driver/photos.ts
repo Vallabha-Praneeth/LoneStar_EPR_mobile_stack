@@ -16,7 +16,7 @@ export async function uploadPhoto({
   campaignId,
   driverId,
   note,
-}: UploadPhotoOptions): Promise<void> {
+}: UploadPhotoOptions): Promise<string> {
   // Validate file size before uploading
   const response = await fetch(imageUri);
   const blob = await response.blob();
@@ -49,7 +49,7 @@ export async function uploadPhoto({
     note: note.trim() || null,
     submitted_at: new Date().toISOString(),
     captured_at: new Date().toISOString(),
-    status: 'pending',
+    status: 'approved',
   });
 
   if (insertError) {
@@ -57,4 +57,6 @@ export async function uploadPhoto({
     await supabase.storage.from('campaign-photos').remove([storagePath]);
     throw insertError;
   }
+
+  return photoId;
 }

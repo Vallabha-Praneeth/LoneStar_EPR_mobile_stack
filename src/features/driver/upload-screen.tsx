@@ -17,6 +17,7 @@ import { Text, View } from '@/components/ui';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchDriverCampaign } from '@/lib/api/driver/campaign';
 import { uploadPhoto } from '@/lib/api/driver/photos';
+import { supabase } from '@/lib/supabase';
 
 // iOS simulator has no camera — fall back to gallery
 const IS_IOS_SIMULATOR = Platform.OS === 'ios' && !Device.isDevice;
@@ -33,7 +34,7 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
       <View className="w-full flex-row gap-3">
         <TouchableOpacity
           onPress={onCamera}
-          className="bg-primary h-12 flex-1 items-center justify-center rounded-xl"
+          className="h-12 flex-1 items-center justify-center rounded-xl bg-primary"
         >
           <Text className="text-sm font-semibold text-white">📷 Take Photo</Text>
         </TouchableOpacity>
@@ -87,8 +88,14 @@ export function UploadScreen() {
   const uploadMutation = useMutation({
     mutationFn: () =>
       uploadPhoto({ imageUri: imageUri!, campaignId: campaign!.id, driverId: profile!.id, note }),
-    onSuccess: () => {
+    onSuccess: (photoId: string) => {
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
+      // Fire-and-forget WhatsApp notification to client
+      supabase.functions
+        .invoke('send-whatsapp-photo', {
+          body: { campaignId: campaign!.id, photoId },
+        })
+        .catch(() => {}); // silent — don't block the driver flow
       router.replace('/(app)/upload-success');
     },
     onError: (err: Error) =>
@@ -157,7 +164,7 @@ export function UploadScreen() {
             testID="submit-photo-button"
             onPress={() => uploadMutation.mutate()}
             disabled={!imageUri || !campaign || uploadMutation.isPending}
-            className="bg-primary h-14 items-center justify-center rounded-xl disabled:opacity-40"
+            className="h-14 items-center justify-center rounded-xl bg-primary disabled:opacity-40"
           >
             {uploadMutation.isPending
               ? <ActivityIndicator color="white" />

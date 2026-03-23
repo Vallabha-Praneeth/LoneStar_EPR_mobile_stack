@@ -30,7 +30,7 @@ function CampaignHeader({ right }: { right: React.ReactNode }) {
   return (
     <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-4 pt-14 pb-3 dark:border-gray-700 dark:bg-gray-800">
       <View className="flex-row items-center gap-2">
-        <View className="bg-primary size-7 items-center justify-center rounded-lg">
+        <View className="size-7 items-center justify-center rounded-lg bg-primary">
           <Text className="text-xs font-bold text-white">AD</Text>
         </View>
         <Text className="text-base font-semibold">My Campaign</Text>
@@ -109,7 +109,7 @@ function ShiftActions({
       <TouchableOpacity
         testID="upload-photo-button"
         onPress={onUploadPhoto}
-        className="bg-primary h-14 items-center justify-center rounded-xl"
+        className="h-14 items-center justify-center rounded-xl bg-primary"
       >
         <Text className="text-base font-semibold text-white">📷 Upload Photo</Text>
       </TouchableOpacity>
@@ -228,10 +228,15 @@ export function CampaignScreen() {
     <View className="flex-1 bg-gray-50 dark:bg-gray-900">
       <CampaignHeader
         right={(
-          <View className={`rounded-full px-2 py-1 ${statusColor}`}>
-            <Text className="text-xs font-medium">
-              {activeShift ? 'Active' : campaign.status}
-            </Text>
+          <View className="flex-row items-center gap-2">
+            <View className={`rounded-full px-2 py-1 ${statusColor}`}>
+              <Text className="text-xs font-medium">
+                {activeShift ? 'Active' : campaign.status}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={signOut}>
+              <Text className="text-sm text-gray-500">Sign out</Text>
+            </TouchableOpacity>
           </View>
         )}
       />
