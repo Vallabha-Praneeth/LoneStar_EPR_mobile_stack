@@ -58,7 +58,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
         <form.Field
           name="username"
           validators={{
-            onChange: usernameSchema as any,
+            onChange: usernameSchema,
           }}
         >
           {field => (
@@ -78,7 +78,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
         <form.Field
           name="password"
           validators={{
-            onChange: passwordSchema as any,
+            onChange: passwordSchema,
           }}
         >
           {field => (
