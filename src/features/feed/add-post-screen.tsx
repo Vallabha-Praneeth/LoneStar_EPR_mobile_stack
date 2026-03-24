@@ -29,7 +29,7 @@ export function AddPostScreen() {
     },
 
     validators: {
-      onChange: schema as any,
+      onChange: schema,
     },
     onSubmit: ({ value }) => {
       console.log(value);
