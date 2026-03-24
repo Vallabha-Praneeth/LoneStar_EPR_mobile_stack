@@ -1,6 +1,7 @@
 appId: ${APP_ID}
 env:
   APP_ID: com.adtruck-driver-native.development
+  APP_ID_ANDROID: com.adtruck_driver_native.development
   USERNAME: driver1
   PASSWORD: DriverPass123!
 ---
@@ -18,15 +19,40 @@ env:
 # The splash screen appears frozen on iOS 26 beta (expo-splash-screen compat bug)
 # but the accessibility tree is fully populated, so Maestro can interact normally.
 
-- launchApp:
-    appId: ${APP_ID}
-    clearState: true
-    arguments:
-      isE2E: 'true'
+# iOS launch — clearState wipes MMKV, deep link reconnects to Metro
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          appId: ${APP_ID}
+          clearState: true
+          arguments:
+            isE2E: 'true'
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 
-# After clearState the dev-client has no saved Metro URL — send the deep link
-# to reconnect. launchApp is still needed first to inject isE2E before JS starts.
-- openLink: 'exp+obytesapp://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
+# Android launch — clearState wipes app data including the saved Metro URL.
+# We must: (1) clear state, (2) stop app, (3) open deep link which both
+# sets the Metro URL AND launches the app in one shot, bypassing the
+# dev client home screen entirely.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: ${APP_ID_ANDROID}
+          clearState: true
+          arguments:
+            isE2E: 'true'
+      - stopApp:
+          appId: ${APP_ID_ANDROID}
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081%3FdisableOnboarding%3D1'
+      # Dismiss onboarding overlay if it appears
+      - runFlow:
+          when:
+            visible: Continue
+          commands:
+            - pressKey: back
 
 # Wait for the JS bundle to download and hydrateAuth() to settle.
 - extendedWaitUntil:
@@ -66,22 +92,53 @@ env:
 - tapOn:
     id: gallery-button
 
-# Grant photo library permission if the system dialog appears (first run after clearState).
+# iOS: grant photo library permission
 - runFlow:
     when:
       visible: Allow Full Access
     commands:
       - tapOn: Allow Full Access
 
-# Select the first photo — optional: true handles iOS 17/18 element ID differences.
-- tapOn:
-    id: PXGGridLayout-Info
-    index: 0
-    optional: true
-- tapOn:
-    text: 'Photo, .*'
-    index: 0
-    optional: true
+# Android: grant photo/media permission (Android 13+ uses granular permissions)
+- runFlow:
+    when:
+      visible: Allow
+    commands:
+      - tapOn: Allow
+
+# iOS photo picker — select first photo
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: PXGGridLayout-Info
+          index: 0
+          optional: true
+      - tapOn:
+          text: 'Photo, .*'
+          index: 0
+          optional: true
+
+# Android photo picker — select first photo
+# expo-image-picker on Android uses the system media picker.
+# The first image thumbnail is tappable by index.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: '.*'
+          timeout: 5000
+      - tapOn:
+          text: 'Photo .*'
+          index: 0
+          optional: true
+      - tapOn:
+          text: '.*'
+          index: 0
+          optional: true
 
 # Photo preview loaded — scroll down to reveal submit button below the fold
 - scroll
