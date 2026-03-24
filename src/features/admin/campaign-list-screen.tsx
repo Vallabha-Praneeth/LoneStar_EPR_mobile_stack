@@ -34,19 +34,19 @@ export function CampaignListScreen() {
     return (
       <TouchableOpacity
         onPress={() => router.push(`/(app)/admin/campaigns/${item.id}`)}
-        className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+        className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800"
       >
         <View className="mb-2 flex-row items-center justify-between">
           <Text className="flex-1 font-semibold" numberOfLines={1}>{item.title}</Text>
           <StatusBadge status={item.status} />
         </View>
-        <Text className="text-sm text-gray-500">
+        <Text className="text-sm text-neutral-500">
           {item.clients?.name ?? 'No client'}
           {' '}
           •
           {item.driver_profile?.display_name ?? 'Unassigned'}
         </Text>
-        <Text className="mt-1 text-xs text-gray-400">
+        <Text className="mt-1 text-xs text-neutral-400">
           {format(new Date(item.campaign_date), 'MMM d, yyyy')}
         </Text>
       </TouchableOpacity>
@@ -63,7 +63,7 @@ export function CampaignListScreen() {
           <Text className="text-base font-semibold">Campaigns</Text>
         </View>
         <TouchableOpacity onPress={signOut}>
-          <Text className="text-sm text-gray-500">Sign out</Text>
+          <Text className="text-sm text-neutral-500">Sign out</Text>
         </TouchableOpacity>
       </View>
 
@@ -85,7 +85,7 @@ export function CampaignListScreen() {
               contentContainerStyle={{ padding: 16, gap: 12 }}
               ListEmptyComponent={(
                 <View className="items-center py-16">
-                  <Text className="text-sm text-gray-500">No campaigns found</Text>
+                  <Text className="text-sm text-neutral-500">No campaigns found</Text>
                 </View>
               )}
             />

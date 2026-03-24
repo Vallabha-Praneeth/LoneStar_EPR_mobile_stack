@@ -50,7 +50,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
           <Text testID="form-title" className="pb-2 text-center text-3xl font-bold">
             AdTruck
           </Text>
-          <Text className="text-center text-gray-500">
+          <Text className="text-center text-neutral-500">
             Sign in to continue
           </Text>
         </View>
@@ -97,7 +97,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
 
         {error
           ? (
-              <Text className="mb-2 text-center text-sm text-red-500">{error}</Text>
+              <Text className="mb-2 text-center text-sm text-danger-500 dark:text-danger-400">{error}</Text>
             )
           : null}
 

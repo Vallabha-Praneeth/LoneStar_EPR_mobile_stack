@@ -8,7 +8,7 @@ import { ActivityIndicator, FlatList, Image } from 'react-native';
 import { AdminHeader } from '@/components/admin-header';
 import { InfoCard } from '@/components/info-card';
 import { StatusBadge } from '@/components/status-badge';
-import { Text, View } from '@/components/ui';
+import { Card, Text, View } from '@/components/ui';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
 
@@ -22,7 +22,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
     <View className="mb-2 gap-4">
       <View className="flex-row items-center gap-2">
         <StatusBadge status={campaign.status} />
-        <Text className="text-sm text-gray-500">
+        <Text className="text-sm text-neutral-500">
           {format(new Date(campaign.campaign_date), 'MMM d, yyyy')}
         </Text>
       </View>
@@ -56,21 +56,21 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
       <InfoCard icon="💵" label="Total Cost" value={`$${totalCost}`} />
 
       {campaign.internal_notes && (
-        <View className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <Text className="mb-1 text-xs text-gray-500">Notes</Text>
+        <Card className="rounded-xl p-4">
+          <Text className="mb-1 text-xs text-neutral-500">Notes</Text>
           <Text className="text-sm">{campaign.internal_notes}</Text>
-        </View>
+        </Card>
       )}
 
       {campaign.driver_shifts.length > 0 && (
-        <View className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <Text className="mb-2 text-xs text-gray-500">Shifts</Text>
+        <Card className="rounded-xl p-4">
+          <Text className="mb-2 text-xs text-neutral-500">Shifts</Text>
           {campaign.driver_shifts.map(shift => (
             <View key={shift.id} className="mb-1 flex-row items-center gap-2">
               <Text className="text-sm">
                 {format(new Date(shift.started_at), 'h:mm a')}
               </Text>
-              <Text className="text-xs text-gray-400">→</Text>
+              <Text className="text-xs text-neutral-400">→</Text>
               <Text className="text-sm">
                 {shift.ended_at
                   ? format(new Date(shift.ended_at), 'h:mm a')
@@ -78,7 +78,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
               </Text>
             </View>
           ))}
-        </View>
+        </Card>
       )}
 
       <Text className="mt-2 text-sm font-semibold">
@@ -102,24 +102,24 @@ function PhotoCard({
   }, [photo.storage_path]);
 
   return (
-    <View className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <View className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
       {url
         ? (
             <Image source={{ uri: url }} className="h-48 w-full" resizeMode="cover" />
           )
         : (
-            <View className="h-48 w-full items-center justify-center bg-gray-100 dark:bg-gray-700">
+            <View className="h-48 w-full items-center justify-center bg-neutral-100 dark:bg-neutral-700">
               <ActivityIndicator />
             </View>
           )}
       <View className="flex-row items-center justify-between p-3">
-        <Text className="text-xs text-gray-500">
+        <Text className="text-xs text-neutral-500">
           {format(new Date(photo.submitted_at), 'MMM d, h:mm a')}
         </Text>
         <StatusBadge status={photo.status} />
       </View>
       {photo.note && (
-        <Text className="px-3 pb-3 text-xs text-gray-500">{photo.note}</Text>
+        <Text className="px-3 pb-3 text-xs text-neutral-500">{photo.note}</Text>
       )}
     </View>
   );
@@ -153,7 +153,7 @@ export function CampaignDetailScreen() {
         renderItem={({ item }) => <PhotoCard photo={item} />}
         ListEmptyComponent={(
           <View className="items-center py-8">
-            <Text className="text-sm text-gray-500">No photos uploaded</Text>
+            <Text className="text-sm text-neutral-500">No photos uploaded</Text>
           </View>
         )}
       />
