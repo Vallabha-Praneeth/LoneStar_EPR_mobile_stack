@@ -3,9 +3,11 @@ import Svg from 'react-native-svg';
 import { withUniwind } from 'uniwind';
 
 export * from './button';
+export * from './card';
 export * from './checkbox';
 export { default as colors } from './colors';
 export * from './focus-aware-status-bar';
+export * from './icon-button';
 export * from './image';
 export * from './input';
 export * from './list';

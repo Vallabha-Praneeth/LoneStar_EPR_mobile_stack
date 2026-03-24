@@ -293,3 +293,217 @@ Seed campaign: `00000000-0000-0000-0000-000000000010`
 | `/security-audit` | Auth, DB, upload security review |
 | `/test-plan` | Test strategy for completed features |
 | `/ship` | Commit message + PR description |
+
+---
+
+---
+
+# Session 2 — Friday, March 19, 2026 (Afternoon/Evening)
+# Dependabot Cleanup + Reanimated Fix + EAS Setup + v0.1.0
+
+---
+
+## Quick Start Next Session
+
+```bash
+cd /Users/praneeth/LoneStar_ERP/adtruck-driver-native
+git checkout main && git pull
+
+# 1. Check Android EAS build result
+eas build:list --limit 3 --non-interactive
+
+# 2. iOS EAS build (requires Apple Developer account + interactive)
+eas build --profile production --platform ios
+
+# 3. After both builds complete — store submission
+eas submit --profile production --platform ios     # → TestFlight
+eas submit --profile production --platform android  # → Play Store
+
+# 4. Fix Maestro openLink URL (slug changed)
+# In .maestro/driver/shift-flow.yaml, change:
+#   exp+obytesapp:// → exp+adtruck-driver-native://
+```
+
+**First task next session:** Check Android build result → run iOS build interactively with Apple Developer credentials.
+
+---
+
+## Session 2 Overview
+
+| Field | Value |
+|-------|-------|
+| Date | Friday, March 19, 2026 (afternoon/evening) |
+| Primary Goal | Merge Dependabot PRs, fix reanimated TS compat, link EAS project, tag v0.1.0 |
+| Outcome | All PRs merged (#9, #14, #15, #16, #17, #18, #19) · v0.1.0 tagged · Android EAS build queued · iOS blocked |
+| GitHub status | main clean, v0.1.0 tagged, no open PRs |
+| Next action | Check Android build → iOS build interactively |
+
+---
+
+## What Was Accomplished — Session 2
+
+### Phase 1 — Review + Dependabot PR Merges ✅
+
+**Login form restoration (PR #17):**
+- `validators: { onChange: schema as any }` confirmed as correct workaround (not removable yet)
+- `.message` property in error display (`(error as any)?.message ?? error`) confirmed as necessary — Zod 4 without zodValidator returns error objects, not plain strings. Removing it broke the validation test.
+- `validatorAdapter` removed from `useForm` level — TS2353 with @tanstack/zod-form-adapter 0.42.1 + Zod 4
+
+**PR #14 assessment (@tanstack/react-form 1.27.7 → 1.28.5):**
+- Checked full diff — `@tanstack/zod-form-adapter` stays at `0.42.1` in PR #14
+- `as any` workaround cannot be removed until the adapter publishes Zod v4 types
+- Safe to merge — no behaviour change
+
+**Merge order:** #17 → #16 → #9 → #14 (PR #14 needed rebase after #17 merged) → #15
+
+---
+
+### Phase 2 — Reanimated 4.2.x TS Compatibility Fix (PR #18) ✅
+
+**Problem:** `@shopify/flash-list` / `@gorhom/bottom-sheet` use `createBottomSheetScrollableComponent` which rejected `AnimatedScrollView` after reanimated 4.2.x tightened `createAnimatedComponent` return type and input constraint.
+
+**File fixed:** `src/components/ui/modal-keyboard-aware-scroll-view.tsx`
+
+Two `as any` casts added:
+```tsx
+const AnimatedScrollView
+  = Reanimated.createAnimatedComponent<KeyboardAwareScrollViewProps>(
+    KeyboardAwareScrollView as any,  // input constraint tightened in 4.2.x
+  );
+const BottomSheetScrollViewComponent = createBottomSheetScrollableComponent<...>(
+  SCROLLABLE_TYPE.SCROLLVIEW, AnimatedScrollView as any  // return type tightened
+);
+```
+
+**package.json:** Added `react-native-reanimated` and `@shopify/flash-list` to `expo.install.exclude` to suppress Expo Doctor false-positive version warnings.
+
+**Expo Doctor issue:** flash-list 2.3.0 and reanimated 4.2.2 are intentionally outside Expo SDK 54 pins. CodeRabbit incorrectly suggested downgrading. Correct fix: `expo.install.exclude`.
+
+---
+
+### Phase 3 — EAS Project Setup (PR #19) ✅
+
+**Problem:** `app.config.ts` was hardcoded to Obytes template EAS project (`c3e1075b-...`, owner: obytes). EAS build failed "not authorized".
+
+**Fix sequence:**
+1. `eas init --non-interactive --force` — created `@adamsroll/adtruck-driver-native`
+2. New EAS Project ID: `c80a449c-11da-4e30-9117-13f2c7a2711c`
+3. Updated `app.config.ts`: `EXPO_ACCOUNT_OWNER = 'adamsroll'`, `EAS_PROJECT_ID = 'c80a449c-...'`, `slug: 'adtruck-driver-native'`
+
+**Android package name fix:**
+- `com.adtruck-driver-native` has hyphens → invalid for Android
+- Fixed `PACKAGES` in `env.ts` to use underscores: `com.adtruck_driver_native`
+- iOS `BUNDLE_IDS` unchanged — hyphens valid for iOS bundle identifiers
+
+**EAS environment variables pushed:**
+```bash
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value <url> --environment production
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <key> --environment production
+eas env:create --scope project --name EXPO_PUBLIC_API_URL --value <url> --environment production
+eas env:create --scope project --name EXPO_PUBLIC_VAR_NUMBER --value 0 --environment production
+eas env:create --scope project --name EXPO_PUBLIC_VAR_BOOL --value false --environment production
+```
+
+**Branch note:** Direct commit to main blocked by Husky pre-commit hook → created `chore/eas-project-setup` branch, PR #19 opened and merged.
+
+---
+
+### Phase 4 — v0.1.0 Tag ✅
+
+- `v0.1.0` tag created by GitHub Actions bot automatically after merges
+- Manual tag attempt (`git tag -a v0.1.0`) failed with "tag already exists" — this was correct, not an error
+
+---
+
+### Phase 5 — EAS Build ✅ (Android) / ⏳ (iOS)
+
+**Android build triggered:**
+- Build ID: `22888524-3fce-4b98-a264-e8448e5267df`
+- Profile: production, Distribution: store
+- Status at session end: in progress
+- EAS dashboard: https://expo.dev/accounts/adamsroll/projects/adtruck-driver-native/builds/22888524-3fce-4b98-a264-e8448e5267df
+
+**iOS build blocked:**
+- "Distribution Certificate is not validated for non-interactive builds"
+- Requires Apple Developer account (developer.apple.com) + interactive `eas build --profile production --platform ios`
+- Deferred to next session
+
+---
+
+## CI Issues Encountered & Fixed — Session 2
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| PR #14 merge conflict after #17 merged | Overlapping `package.json` changes | `@dependabot rebase` comment triggered |
+| EAS "not authorized" | `app.config.ts` hardcoded to Obytes EAS project | `eas init --force` → new project |
+| EAS "invalid Android applicationId" | `com.adtruck-driver-native` has hyphens | Changed `PACKAGES` to underscores in `env.ts` |
+| EAS "no environment variables" | New EAS project had no env vars | `eas env:create` × 5 |
+| iOS EAS build failed non-interactive | No Apple Distribution Certificate | Deferred — needs interactive + Apple Developer account |
+| Expo Doctor FAIL on PR #18 | flash-list 2.3.0 + reanimated 4.2.2 outside Expo SDK 54 pins | Added to `expo.install.exclude` in `package.json` |
+
+---
+
+## Known Issues Table (Final — End of Day)
+
+| # | Status | Location | Issue |
+|---|--------|----------|-------|
+| 1 | ✅ FIXED | `campaign-screen.tsx` | date-fns v3 tokens (`'MMMM d, yyyy'`) |
+| 2 | ✅ FIXED | `upload-screen.tsx` | Camera detection uses `Device.isDevice` |
+| 3 | ✅ FIXED | `login-form.test.tsx` | Tests correct — `username-input`, 39/39 pass |
+| 4 | ⚠️ WORKAROUND | `login-form.tsx` | `validators: schema as any` — waiting on @tanstack/zod-form-adapter Zod v4 support |
+| 5 | ⚠️ DELIBERATE | `supabase.ts` | MMKV session storage — intentional (secure-store 2048b limit) |
+| 6 | ✅ FIXED | `(app)/_layout.tsx` | 5s splash fallback — intentional, kept |
+| 7 | ✅ FIXED | `login-form.tsx` button | `form.handleSubmit` — correct |
+| 8 | ✅ FIXED | `modal-keyboard-aware-scroll-view.tsx` | reanimated 4.2.x type compat — two `as any` casts |
+| 9 | ✅ FIXED | `app.config.ts` / `env.ts` | EAS project linked to adamsroll, Android package name fixed |
+
+---
+
+## Final Package State
+
+| Package | Version | Notes |
+|---------|---------|-------|
+| react-native-reanimated | ~4.2.2 | Intentionally above Expo SDK 54 pin; excluded from doctor |
+| @shopify/flash-list | 2.3.0 | Intentionally above Expo SDK 54 pin; excluded from doctor |
+| react-native-worklets | ^0.7.4 | Bumped from 0.7.2 |
+| @tanstack/react-form | ^1.28.5 | Bumped from 1.27.7 |
+| dotenv | ^17.3.1 | Bumped from 17.2.3 |
+
+---
+
+## EAS Project State
+
+| Field | Value |
+|-------|-------|
+| EAS Account | adamsroll |
+| Project Name | adtruck-driver-native |
+| EAS Project ID | c80a449c-11da-4e30-9117-13f2c7a2711c |
+| iOS Bundle ID | com.adtruck-driver-native (prod) |
+| Android Package | com.adtruck_driver_native (prod) |
+| Android Build ID | 22888524-3fce-4b98-a264-e8448e5267df |
+| iOS Build | ⏳ Blocked — needs Apple Developer account |
+
+---
+
+## Tomorrow's Tasks (Priority Order)
+
+| # | Task | Command |
+|---|------|---------|
+| 1 | Check Android build result | `eas build:list --limit 3 --non-interactive` |
+| 2 | iOS EAS build (interactive) | `eas build --profile production --platform ios` |
+| 3 | Verify Android AAB | Download from EAS dashboard, test on emulator |
+| 4 | iOS TestFlight | `eas submit --profile production --platform ios` |
+| 5 | Android Play Store | `eas submit --profile production --platform android` |
+| 6 | Fix Maestro `openLink` URL | `exp+obytesapp://` → `exp+adtruck-driver-native://` |
+
+---
+
+## Simulator (for local dev/E2E)
+
+| Component | Value |
+|-----------|-------|
+| Device | iPhone 16e |
+| UDID | A4152A57-003A-47D9-8713-D7E0FFB3D04D |
+| App bundle (dev) | com.adtruck-driver-native.development |
+| Maestro flow | `.maestro/driver/shift-flow.yaml` |
+| ⚠️ Note | `openLink` URL still uses `exp+obytesapp://` slug — update to `exp+adtruck-driver-native://` before next Maestro run |
