@@ -22,7 +22,7 @@ export type LoginFormProps = {
 // In all other builds (including dev) the field is always secure.
 const isE2E = LaunchArguments.value<{ isE2E?: string }>().isE2E === 'true';
 
-const usernameSchema = z.string().min(1, 'Username is required');
+const usernameSchema = z.string().min(1, 'Username or email is required');
 const passwordSchema = z.string().min(1, 'Password is required');
 
 export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
@@ -44,14 +44,14 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
     >
       <View className="flex-1 justify-center p-6">
         <View className="mb-8 items-center justify-center">
-          <View className="bg-primary mb-4 size-16 items-center justify-center rounded-2xl">
+          <View className="mb-4 size-16 items-center justify-center rounded-2xl bg-primary">
             <Text className="text-xl font-bold text-white">AD</Text>
           </View>
           <Text testID="form-title" className="pb-2 text-center text-3xl font-bold">
-            AdTruck Driver
+            AdTruck
           </Text>
-          <Text className="text-center text-gray-500">
-            Sign in with your driver credentials
+          <Text className="text-center text-neutral-500">
+            Sign in to continue
           </Text>
         </View>
 
@@ -64,7 +64,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
           {field => (
             <Input
               testID="username-input"
-              label="Username"
+              label="Username or Email"
               autoCapitalize="none"
               autoCorrect={false}
               value={field.state.value}
@@ -97,7 +97,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
 
         {error
           ? (
-              <Text className="mb-2 text-center text-sm text-red-500">{error}</Text>
+              <Text className="mb-2 text-center text-sm text-danger-500 dark:text-danger-400">{error}</Text>
             )
           : null}
 

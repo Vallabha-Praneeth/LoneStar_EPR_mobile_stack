@@ -16,17 +16,26 @@ export function LoginScreen() {
   const onSubmit: LoginFormProps['onSubmit'] = async ({ username, password }) => {
     setError(null);
     try {
-      // Step 1: resolve username → email via RPC
-      const { data: email, error: rpcError } = await supabase.rpc(
-        'get_auth_email_by_username',
-        { p_username: username, p_role: 'driver' },
-      );
-      if (rpcError || !email) {
-        setError('Invalid username or password.');
-        return;
+      let email: string;
+
+      if (username.includes('@')) {
+        // Direct email login (admin/client)
+        email = username;
+      }
+      else {
+        // Username login — resolve via RPC (any role)
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc(
+          'get_auth_email_by_username',
+          { p_username: username, p_role: null },
+        );
+        if (rpcError || !resolvedEmail) {
+          setError('Invalid username or password.');
+          return;
+        }
+        email = resolvedEmail;
       }
 
-      // Step 2: sign in with resolved email + password
+      // Sign in with resolved email + password
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -36,7 +45,7 @@ export function LoginScreen() {
         return;
       }
 
-      // Step 3: fetch driver profile
+      // Fetch profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -49,7 +58,18 @@ export function LoginScreen() {
       }
 
       signIn(data.session, profile as Profile);
-      router.replace('/(app)');
+
+      // Route based on role
+      const role = (profile as Profile).role;
+      if (role === 'admin') {
+        router.replace('/(app)/admin/campaigns');
+      }
+      else if (role === 'client') {
+        router.replace('/(app)/client');
+      }
+      else {
+        router.replace('/(app)');
+      }
     }
     catch {
       setError('Something went wrong. Please try again.');

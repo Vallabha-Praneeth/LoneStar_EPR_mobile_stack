@@ -7,6 +7,7 @@ import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 
 import { showMessage } from 'react-native-flash-message';
 import { Text, View } from '@/components/ui';
+import { Camera, Clock, Play, StopCircle } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import {
   endShift,
@@ -21,16 +22,16 @@ function getStatusColor(activeShift: boolean, status: string): string {
     return 'bg-green-100 text-green-700';
   }
   if (status === 'completed') {
-    return 'bg-gray-100 text-gray-600';
+    return 'bg-neutral-100 text-neutral-600';
   }
   return 'bg-blue-100 text-blue-700';
 }
 
 function CampaignHeader({ right }: { right: React.ReactNode }) {
   return (
-    <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-4 pt-14 pb-3 dark:border-gray-700 dark:bg-gray-800">
+    <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
       <View className="flex-row items-center gap-2">
-        <View className="bg-primary size-7 items-center justify-center rounded-lg">
+        <View className="size-7 items-center justify-center rounded-lg bg-primary">
           <Text className="text-xs font-bold text-white">AD</Text>
         </View>
         <Text className="text-base font-semibold">My Campaign</Text>
@@ -42,17 +43,17 @@ function CampaignHeader({ right }: { right: React.ReactNode }) {
 
 function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
           <TouchableOpacity onPress={onSignOut}>
-            <Text className="text-sm text-gray-500">Sign out</Text>
+            <Text className="text-sm text-neutral-500">Sign out</Text>
           </TouchableOpacity>
         )}
       />
       <View className="flex-1 items-center justify-center p-6">
-        <View className="w-full items-center rounded-2xl border border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800">
-          <Text className="text-center text-sm text-gray-500">
+        <View className="w-full items-center rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
+          <Text className="text-center text-sm text-neutral-500">
             No active campaign assigned to you today.
           </Text>
         </View>
@@ -64,8 +65,9 @@ function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
 function ShiftStatusBadge({ startedAt }: { startedAt: string }) {
   return (
     <View className="flex-row items-center gap-2 rounded-lg bg-green-50 px-3 py-2">
+      <Clock color="#15803d" width={14} height={14} />
       <Text className="text-sm text-green-700">
-        ⏱ Shift started at
+        Shift started at
         {' '}
         {format(new Date(startedAt), 'h:mm a')}
       </Text>
@@ -98,9 +100,16 @@ function ShiftActions({
         disabled={isStartPending}
         className="h-14 items-center justify-center rounded-xl bg-green-500 disabled:opacity-50"
       >
-        <Text className="text-base font-semibold text-white">
-          {isStartPending ? 'Starting...' : '▶ Start Shift'}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          {isStartPending
+            ? <Text className="text-base font-semibold text-white">Starting...</Text>
+            : (
+                <>
+                  <Play color="#fff" width={18} height={18} />
+                  <Text className="text-base font-semibold text-white">Start Shift</Text>
+                </>
+              )}
+        </View>
       </TouchableOpacity>
     );
   }
@@ -109,9 +118,12 @@ function ShiftActions({
       <TouchableOpacity
         testID="upload-photo-button"
         onPress={onUploadPhoto}
-        className="bg-primary h-14 items-center justify-center rounded-xl"
+        className="h-14 items-center justify-center rounded-xl bg-primary"
       >
-        <Text className="text-base font-semibold text-white">📷 Upload Photo</Text>
+        <View className="flex-row items-center gap-2">
+          <Camera color="#fff" width={18} height={18} />
+          <Text className="text-base font-semibold text-white">Upload Photo</Text>
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         testID="end-shift-button"
@@ -119,9 +131,16 @@ function ShiftActions({
         disabled={isEndPending}
         className="h-14 items-center justify-center rounded-xl border border-red-300 disabled:opacity-50"
       >
-        <Text className="text-base font-semibold text-red-500">
-          {isEndPending ? 'Ending...' : '⏹ End Shift'}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          {isEndPending
+            ? <Text className="text-base font-semibold text-red-500">Ending...</Text>
+            : (
+                <>
+                  <StopCircle color="#ef4444" width={18} height={18} />
+                  <Text className="text-base font-semibold text-red-500">End Shift</Text>
+                </>
+              )}
+        </View>
       </TouchableOpacity>
     </>
   );
@@ -129,18 +148,18 @@ function ShiftActions({
 
 function RecentUploadsList({ photos }: { photos: CampaignPhoto[] }) {
   return (
-    <View className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+    <View className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
       <Text className="mb-3 font-semibold">Recent Uploads</Text>
       {photos.map((photo, i) => (
         <View
           key={photo.id}
           className={`flex-row items-center justify-between py-2 ${
-            i < photos.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
+            i < photos.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-700' : ''
           }`}
         >
           <View className="flex-row items-center gap-3">
-            <View className="size-10 rounded-lg bg-gray-100 dark:bg-gray-700" />
-            <Text className="text-sm text-gray-500">
+            <View className="size-10 rounded-lg bg-neutral-100 dark:bg-neutral-700" />
+            <Text className="text-sm text-neutral-500">
               {format(new Date(photo.submitted_at), 'h:mm a')}
             </Text>
           </View>
@@ -225,13 +244,18 @@ export function CampaignScreen() {
   const statusColor = getStatusColor(!!activeShift, campaign.status);
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
-          <View className={`rounded-full px-2 py-1 ${statusColor}`}>
-            <Text className="text-xs font-medium">
-              {activeShift ? 'Active' : campaign.status}
-            </Text>
+          <View className="flex-row items-center gap-2">
+            <View className={`rounded-full px-2 py-1 ${statusColor}`}>
+              <Text className="text-xs font-medium">
+                {activeShift ? 'Active' : campaign.status}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={signOut}>
+              <Text className="text-sm text-neutral-500">Sign out</Text>
+            </TouchableOpacity>
           </View>
         )}
       />
@@ -240,10 +264,10 @@ export function CampaignScreen() {
         contentContainerStyle={{ padding: 16, gap: 16 }}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View className="gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+        <View className="gap-4 rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
           <View>
             <Text className="text-lg font-semibold">{campaign.title}</Text>
-            <Text className="mt-1 text-sm text-gray-500">
+            <Text className="mt-1 text-sm text-neutral-500">
               {format(new Date(`${campaign.campaign_date}T12:00:00`), 'MMMM d, yyyy')}
               {campaign.route_code ? ` • Route ${campaign.route_code}` : ''}
             </Text>

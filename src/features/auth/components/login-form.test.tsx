@@ -23,7 +23,7 @@ describe('loginForm Form ', () => {
     await user.press(button);
 
     await waitFor(() => {
-      expect(screen.getByText('Username is required')).toBeOnTheScreen();
+      expect(screen.getByText('Username or email is required')).toBeOnTheScreen();
       expect(screen.getByText('Password is required')).toBeOnTheScreen();
     });
 

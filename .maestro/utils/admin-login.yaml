@@ -1,0 +1,30 @@
+appId: ${APP_ID}
+tags:
+  - util
+env:
+  APP_ID: com.adtruck_driver_native.development
+  USERNAME: admin@adtruck.com
+  PASSWORD: mawqex-rYsneq-kynja5
+---
+# Taps the login form and submits admin credentials.
+# Only call this flow when "Sign In" is already visible.
+- tapOn:
+    id: username-input
+- inputText: ${USERNAME}
+- tapOn:
+    id: password-input
+- inputText: ${PASSWORD}
+- runFlow: ./hide-keyboard.yaml
+- tapOn:
+    id: login-button
+# iOS may show a "Save Password?" keychain sheet after login.
+- runFlow:
+    when:
+      visible: Not Now
+    commands:
+      - tapOn: Not Now
+# Admin login involves Supabase auth + profile fetch + redirect to admin tabs.
+- extendedWaitUntil:
+    visible: Campaigns
+    timeout: 20000
+- assertVisible: Campaigns

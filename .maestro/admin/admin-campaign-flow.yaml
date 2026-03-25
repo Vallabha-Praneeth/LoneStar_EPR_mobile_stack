@@ -1,0 +1,58 @@
+appId: ${APP_ID}
+env:
+  APP_ID: com.adtruck_driver_native.development
+  USERNAME: admin@adtruck.com
+  PASSWORD: mawqex-rYsneq-kynja5
+---
+# Admin campaign flow: login → campaign list → campaign detail → tabs → sign out
+#
+# NOTE: This flow does NOT use clearState because the dev-client deep link
+# (openLink) fails on iOS 26.3 and may fail on some Android emulators.
+# Instead, it assumes the app is on the login screen.
+
+# Login as admin
+- runFlow: ../utils/admin-login.yaml
+
+# Campaign list screen — verify campaigns are visible
+- assertVisible: Campaigns
+
+# Tap on the first campaign (Acme Corp — Summer Launch or Spring Promo)
+- tapOn:
+    text: 'Acme Corp.*'
+    index: 0
+
+# Campaign detail screen — verify key sections loaded
+- extendedWaitUntil:
+    visible: Client
+    timeout: 10000
+- assertVisible: Client
+- assertVisible: Driver
+
+# Go back to campaign list
+- back
+
+# Navigate to other admin tabs
+- tapOn: Reports
+- extendedWaitUntil:
+    visible: Reports
+    timeout: 10000
+
+- tapOn: Users
+- extendedWaitUntil:
+    visible: Users
+    timeout: 10000
+
+# Sign out from campaign list tab
+- tapOn: Campaigns
+- extendedWaitUntil:
+    visible: Sign out
+    timeout: 5000
+- tapOn: Sign out
+
+# Verify we're back on login screen
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 10000
+- assertVisible:
+    id: login-button
