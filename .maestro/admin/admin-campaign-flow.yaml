@@ -5,24 +5,57 @@ env:
   PASSWORD: mawqex-rYsneq-kynja5
 ---
 # Admin campaign flow: login → campaign list → campaign detail → tabs → sign out
-#
-# NOTE: This flow does NOT use clearState because the dev-client deep link
-# (openLink) fails on iOS 26.3 and may fail on some Android emulators.
-# Instead, it assumes the app is on the login screen.
+# Cross-platform: iOS (iPhone 16e) + Android (Pixel 7 API 36)
 
-# Login as admin
+# ── Launch ──────────────────────────────────────────────────────────
+# iOS launch — clearState wipes MMKV, deep link reconnects to Metro
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          appId: ${APP_ID}
+          clearState: true
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8083%3FdisableOnboarding%3D1'
+
+# Android launch — clearState + stop + deep link to set Metro URL
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: ${APP_ID}
+          clearState: true
+      - stopApp:
+          appId: ${APP_ID}
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8083%3FdisableOnboarding%3D1'
+      # Dismiss dev menu overlay if it appears
+      - runFlow:
+          when:
+            visible: Continue
+          commands:
+            - tapOn: Continue
+
+# Wait for JS bundle + auth hydration
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 30000
+- assertVisible:
+    id: login-button
+
+# ── Login as admin ──────────────────────────────────────────────────
 - runFlow: ../utils/admin-login.yaml
 
-# Campaign list screen — verify campaigns are visible
+# Campaign list screen — verify we're logged in
 - assertVisible:
     id: sign-out-button
 
-# Tap on the first campaign (Acme Corp — Summer Launch or Spring Promo)
+# ── Campaign detail ─────────────────────────────────────────────────
 - tapOn:
     text: 'Acme Corp.*'
     index: 0
 
-# Campaign detail screen — verify key sections loaded
 - extendedWaitUntil:
     visible: Client
     timeout: 10000
@@ -33,30 +66,58 @@ env:
 - tapOn:
     id: back-button
 
-# Navigate to other admin tabs — native tab labels aren't matchable by Maestro,
-# so use tab bar point coordinates (iPhone 16e: 393pt wide, 4 tabs).
-# Tab centers: Campaigns≈49, Create≈147, Reports≈245, Users≈341  y≈798
-- tapOn:
-    point: "245,798"
-- extendedWaitUntil:
-    visible:
-      id: reports-screen
-    timeout: 10000
+# ── Navigate admin tabs ─────────────────────────────────────────────
+# Native tab labels aren't matchable by Maestro on iOS.
+# Use point-based coordinates per platform.
+# iOS (iPhone 16e, 393pt): Campaigns≈49, Create≈147, Reports≈245, Users≈341  y≈798
+# Android (Pixel 7, 1080x2400@420dpi): Campaigns≈135, Create≈405, Reports≈675, Users≈945  y≈2310
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          point: "245,798"
+      - extendedWaitUntil:
+          visible:
+            id: reports-screen
+          timeout: 10000
+      - tapOn:
+          point: "341,798"
+      - extendedWaitUntil:
+          visible:
+            id: users-screen
+          timeout: 10000
+      - tapOn:
+          point: "49,798"
+      - extendedWaitUntil:
+          visible:
+            id: sign-out-button
+          timeout: 5000
 
-- tapOn:
-    point: "341,798"
-- extendedWaitUntil:
-    visible:
-      id: users-screen
-    timeout: 10000
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          point: "675,2310"
+      - extendedWaitUntil:
+          visible:
+            id: reports-screen
+          timeout: 10000
+      - tapOn:
+          point: "945,2310"
+      - extendedWaitUntil:
+          visible:
+            id: users-screen
+          timeout: 10000
+      - tapOn:
+          point: "135,2310"
+      - extendedWaitUntil:
+          visible:
+            id: sign-out-button
+          timeout: 5000
 
-# Sign out from campaign list tab
-- tapOn:
-    point: "49,798"
-- extendedWaitUntil:
-    visible:
-      id: sign-out-button
-    timeout: 5000
+# ── Sign out ────────────────────────────────────────────────────────
 - tapOn:
     id: sign-out-button
 

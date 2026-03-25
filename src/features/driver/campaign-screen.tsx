@@ -39,7 +39,7 @@ function CampaignHeader({ right }: { right: React.ReactNode }) {
 
 function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
           <TouchableOpacity
@@ -251,7 +251,7 @@ export function CampaignScreen() {
   const statusColor = getStatusColor(!!activeShift, campaign.status);
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
           <View className="flex-row items-center gap-2">
