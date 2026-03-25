@@ -29,11 +29,11 @@ function UserCard({
   onToggle: (user: UserRow) => void;
   isPending: boolean;
 }) {
-  const roleBg = ROLE_COLORS[item.role] ?? 'bg-gray-100';
-  const roleText = ROLE_TEXT[item.role] ?? 'text-gray-600';
+  const roleBg = ROLE_COLORS[item.role] ?? 'bg-neutral-100';
+  const roleText = ROLE_TEXT[item.role] ?? 'text-neutral-600';
 
   return (
-    <View className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+    <View className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
       <View className="mb-2 flex-row items-center justify-between">
         <View className="flex-1 flex-row items-center gap-2">
           <Text className="font-semibold" numberOfLines={1}>{item.display_name}</Text>
@@ -53,18 +53,18 @@ function UserCard({
           </View>
         </TouchableOpacity>
       </View>
-      <Text className="text-sm text-gray-500">
+      <Text className="text-sm text-neutral-500">
         @
         {item.username}
       </Text>
       {item.clients?.name && (
-        <Text className="mt-1 text-xs text-gray-400">
+        <Text className="mt-1 text-xs text-neutral-400">
           Client:
           {' '}
           {item.clients.name}
         </Text>
       )}
-      <Text className="mt-1 text-xs text-gray-400">
+      <Text className="mt-1 text-xs text-neutral-400">
         Joined
         {' '}
         {format(new Date(item.created_at), 'MMM d, yyyy')}
@@ -111,8 +111,8 @@ export function UsersScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
-      <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-4 pt-14 pb-3 dark:border-gray-700 dark:bg-gray-800">
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+      <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-center gap-2">
           <View className="size-7 items-center justify-center rounded-lg bg-primary">
             <Text className="text-xs font-bold text-white">AD</Text>
@@ -141,7 +141,7 @@ export function UsersScreen() {
               contentContainerStyle={{ padding: 16, gap: 12 }}
               ListEmptyComponent={(
                 <View className="items-center py-16">
-                  <Text className="text-sm text-gray-500">No users found</Text>
+                  <Text className="text-sm text-neutral-500">No users found</Text>
                 </View>
               )}
             />

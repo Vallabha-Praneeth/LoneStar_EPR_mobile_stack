@@ -54,8 +54,8 @@ export function CampaignListScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
-      <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-4 pt-14 pb-3 dark:border-gray-700 dark:bg-gray-800">
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+      <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-center gap-2">
           <View className="size-7 items-center justify-center rounded-lg bg-primary">
             <Text className="text-xs font-bold text-white">AD</Text>

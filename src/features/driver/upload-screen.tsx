@@ -14,6 +14,7 @@ import {
 import { showMessage } from 'react-native-flash-message';
 
 import { Text, View } from '@/components/ui';
+import { Camera, ChevronLeft, ImageIcon, Upload } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchDriverCampaign } from '@/lib/api/driver/campaign';
 import { uploadPhoto } from '@/lib/api/driver/photos';
@@ -24,11 +25,11 @@ const IS_IOS_SIMULATOR = Platform.OS === 'ios' && !Device.isDevice;
 
 function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGallery: () => void }) {
   return (
-    <View className="items-center gap-4 rounded-xl border-2 border-dashed border-gray-200 p-8 dark:border-gray-600">
-      <View className="size-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-700">
-        <Text className="text-3xl">📷</Text>
+    <View className="items-center gap-4 rounded-xl border-2 border-dashed border-neutral-200 p-8 dark:border-neutral-600">
+      <View className="size-16 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-700">
+        <Camera color="#6b7280" width={32} height={32} />
       </View>
-      <Text className="text-center text-sm text-gray-500">
+      <Text className="text-center text-sm text-neutral-500">
         Take a photo or choose from gallery
       </Text>
       <View className="w-full flex-row gap-3">
@@ -36,16 +37,20 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
           onPress={onCamera}
           className="h-12 flex-1 items-center justify-center rounded-xl bg-primary"
         >
-          <Text className="text-sm font-semibold text-white">📷 Take Photo</Text>
+          <View className="flex-row items-center gap-2">
+            <Camera color="#fff" width={16} height={16} />
+            <Text className="text-sm font-semibold text-white">Take Photo</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           testID="gallery-button"
           onPress={onGallery}
-          className="h-12 flex-1 items-center justify-center rounded-xl border border-gray-300 dark:border-gray-600"
+          className="h-12 flex-1 items-center justify-center rounded-xl border border-neutral-300 dark:border-neutral-600"
         >
-          <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            🖼 Gallery
-          </Text>
+          <View className="flex-row items-center gap-2">
+            <ImageIcon color="#525252" width={16} height={16} />
+            <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Gallery</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -65,7 +70,7 @@ function PhotoPreview({ uri, onClear }: { uri: string; onClear: () => void }) {
         onPress={onClear}
         className="absolute top-2 right-2 rounded-lg bg-white/80 px-3 py-1"
       >
-        <Text className="text-xs font-medium text-gray-600">Change</Text>
+        <Text className="text-xs font-medium text-neutral-600">Change</Text>
       </TouchableOpacity>
     </View>
   );
@@ -131,10 +136,10 @@ export function UploadScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
-      <View className="flex-row items-center gap-3 border-b border-gray-200 bg-white px-4 pt-14 pb-3 dark:border-gray-700 dark:bg-gray-800">
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+      <View className="flex-row items-center gap-3 border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-lg text-gray-500">‹</Text>
+          <ChevronLeft color="#737373" width={20} height={20} />
         </TouchableOpacity>
         <Text className="text-base font-semibold">Upload Photo</Text>
       </View>
@@ -143,7 +148,7 @@ export function UploadScreen() {
         contentContainerStyle={{ padding: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="gap-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+        <View className="gap-5 rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
           {imageUri
             ? <PhotoPreview uri={imageUri} onClear={() => setImageUri(null)} />
             : <PhotoPickerArea onCamera={handleCamera} onGallery={handleGallery} />}
@@ -156,8 +161,8 @@ export function UploadScreen() {
               multiline
               numberOfLines={2}
               style={{ fontSize: 16 }} // 16px prevents iOS auto-zoom
-              className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              placeholderTextColor="#9ca3af"
+              className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-neutral-900 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white"
+              placeholderTextColor="#a3a3a3"
             />
           </View>
           <TouchableOpacity
@@ -168,7 +173,12 @@ export function UploadScreen() {
           >
             {uploadMutation.isPending
               ? <ActivityIndicator color="white" />
-              : <Text className="text-base font-semibold text-white">↑ Submit Photo</Text>}
+              : (
+                  <View className="flex-row items-center gap-2">
+                    <Upload color="#fff" width={18} height={18} />
+                    <Text className="text-base font-semibold text-white">Submit Photo</Text>
+                  </View>
+                )}
           </TouchableOpacity>
         </View>
       </ScrollView>

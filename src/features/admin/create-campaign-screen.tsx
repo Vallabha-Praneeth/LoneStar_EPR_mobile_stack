@@ -21,7 +21,7 @@ import { fetchClients, fetchDrivers } from '@/lib/api/admin/selectors';
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View>
-      <Text className="mb-1 text-xs font-medium text-gray-500">{label}</Text>
+      <Text className="mb-1 text-xs font-medium text-neutral-500">{label}</Text>
       {children}
     </View>
   );
@@ -41,14 +41,14 @@ function FormInput({
   multiline?: boolean;
 }) {
   return (
-    <View className="rounded-xl border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+    <View className="rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800">
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor="#a3a3a3"
         style={{ fontSize: 16, minHeight: multiline ? 80 : undefined }}
-        className="text-gray-900 dark:text-white"
+        className="text-neutral-900 dark:text-white"
         keyboardType={keyboardType}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : undefined}
@@ -81,11 +81,11 @@ function SelectorList<T extends { id: string }>({
             className={`rounded-full border px-3 py-1.5 ${
               isSelected
                 ? 'border-primary bg-primary/10'
-                : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+                : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'
             }`}
           >
             <Text
-              className={`text-sm ${isSelected ? 'font-medium text-primary' : 'text-gray-700 dark:text-gray-300'}`}
+              className={`text-sm ${isSelected ? 'font-medium text-primary' : 'text-neutral-700 dark:text-neutral-300'}`}
             >
               {String(item[labelKey])}
             </Text>
@@ -93,7 +93,7 @@ function SelectorList<T extends { id: string }>({
         );
       })}
       {items.length === 0 && (
-        <Text className="text-sm text-gray-400">None available</Text>
+        <Text className="text-sm text-neutral-400">None available</Text>
       )}
     </View>
   );
@@ -228,7 +228,7 @@ export function CreateCampaignScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <AdminHeader
         title="Create Campaign"
         showBack={false}
