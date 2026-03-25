@@ -14,7 +14,8 @@ env:
 - runFlow: ../utils/admin-login.yaml
 
 # Campaign list screen — verify campaigns are visible
-- assertVisible: Campaigns
+- assertVisible:
+    id: sign-out-button
 
 # Tap on the first campaign (Acme Corp — Summer Launch or Spring Promo)
 - tapOn:
@@ -29,25 +30,35 @@ env:
 - assertVisible: Driver
 
 # Go back to campaign list
-- back
+- tapOn:
+    id: back-button
 
-# Navigate to other admin tabs
-- tapOn: Reports
+# Navigate to other admin tabs — native tab labels aren't matchable by Maestro,
+# so use tab bar point coordinates (iPhone 16e: 393pt wide, 4 tabs).
+# Tab centers: Campaigns≈49, Create≈147, Reports≈245, Users≈341  y≈798
+- tapOn:
+    point: "245,798"
 - extendedWaitUntil:
-    visible: Reports
+    visible:
+      id: reports-screen
     timeout: 10000
 
-- tapOn: Users
+- tapOn:
+    point: "341,798"
 - extendedWaitUntil:
-    visible: Users
+    visible:
+      id: users-screen
     timeout: 10000
 
 # Sign out from campaign list tab
-- tapOn: Campaigns
+- tapOn:
+    point: "49,798"
 - extendedWaitUntil:
-    visible: Sign out
+    visible:
+      id: sign-out-button
     timeout: 5000
-- tapOn: Sign out
+- tapOn:
+    id: sign-out-button
 
 # Verify we're back on login screen
 - extendedWaitUntil:

@@ -19,6 +19,7 @@ export function AdminHeader({ title, showBack = true, right }: AdminHeaderProps)
       <View className="flex-1 flex-row items-center gap-2">
         {showBack && (
           <TouchableOpacity
+            testID="back-button"
             onPress={() => router.back()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"

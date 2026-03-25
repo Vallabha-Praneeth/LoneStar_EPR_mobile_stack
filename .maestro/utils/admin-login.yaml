@@ -24,7 +24,10 @@ env:
     commands:
       - tapOn: Not Now
 # Admin login involves Supabase auth + profile fetch + redirect to admin tabs.
+# The campaigns screen shows the sign-out button (AppLogo replaced "Campaigns" header).
 - extendedWaitUntil:
-    visible: Campaigns
+    visible:
+      id: sign-out-button
     timeout: 20000
-- assertVisible: Campaigns
+- assertVisible:
+    id: sign-out-button

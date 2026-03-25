@@ -39,8 +39,6 @@ export function CampaignListScreen() {
     );
   });
 
-  const activeCt = campaigns.filter(c => c.status === 'active').length;
-
   function renderItem({ item }: { item: CampaignRow }) {
     const accentColor = STATUS_ACCENT[item.status] ?? STATUS_ACCENT.draft;
 
@@ -85,6 +83,8 @@ export function CampaignListScreen() {
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
         <TouchableOpacity
+          testID="sign-out-button"
+          accessibilityLabel="Sign out"
           onPress={signOut}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
@@ -99,7 +99,7 @@ export function CampaignListScreen() {
             {campaigns.length}
             {' '}
             total ·
-            {activeCt}
+            {campaigns.filter(c => c.status === 'active').length}
             {' '}
             active
           </Text>

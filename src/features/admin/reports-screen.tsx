@@ -93,7 +93,7 @@ export function ReportsScreen() {
   const totalShifts = filtered.reduce((sum, c) => sum + c.driver_shifts.length, 0);
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <View testID="reports-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
       </View>
