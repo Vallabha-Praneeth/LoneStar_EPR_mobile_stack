@@ -21,7 +21,7 @@ import { fetchClients, fetchDrivers } from '@/lib/api/admin/selectors';
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View>
-      <Text className="mb-1 text-xs font-medium text-neutral-500">{label}</Text>
+      <Text className="mb-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-400">{label}</Text>
       {children}
     </View>
   );
@@ -233,10 +233,15 @@ export function CreateCampaignScreen() {
         title="Create Campaign"
         showBack={false}
         right={(
-          <TouchableOpacity onPress={handleSubmit} disabled={mutation.isPending}>
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={mutation.isPending}
+            activeOpacity={0.7}
+            className="rounded-lg bg-primary px-4 py-1.5 disabled:opacity-50"
+          >
             {mutation.isPending
-              ? <ActivityIndicator size="small" />
-              : <Text className="text-sm font-semibold text-primary">Save</Text>}
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text className="text-sm font-semibold text-white">Save</Text>}
           </TouchableOpacity>
         )}
       />

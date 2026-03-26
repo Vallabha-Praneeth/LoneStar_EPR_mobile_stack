@@ -6,18 +6,19 @@ type InfoCardProps = {
   icon: React.ReactNode;
   label: string;
   value: string;
+  compact?: boolean;
 };
 
-export function InfoCard({ icon, label, value }: InfoCardProps) {
+export function InfoCard({ icon, label, value, compact }: InfoCardProps) {
   return (
-    <Card className="rounded-xl p-4">
+    <Card className={`rounded-xl ${compact ? 'p-3' : 'p-4'}`}>
       <View className="mb-1 flex-row items-center gap-2">
         {typeof icon === 'string'
           ? <Text className="text-sm">{icon}</Text>
           : <View className="size-4 items-center justify-center">{icon}</View>}
-        <Text className="text-xs text-neutral-500">{label}</Text>
+        <Text className="text-xs font-medium tracking-wider text-neutral-400 uppercase">{label}</Text>
       </View>
-      <Text className="font-semibold">{value}</Text>
+      <Text className={`font-semibold ${compact ? 'text-sm' : ''}`}>{value}</Text>
     </Card>
   );
 }

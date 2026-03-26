@@ -25,7 +25,8 @@ env:
     commands:
       - tapOn: Not Now
 # Login involves two Supabase network calls (RPC + signIn). Allow up to 20s.
+# The driver campaign screen shows either a campaign with shift buttons or an empty state.
 - extendedWaitUntil:
-    visible: My Campaign
+    visible:
+      id: driver-campaign-screen
     timeout: 20000
-- assertVisible: My Campaign

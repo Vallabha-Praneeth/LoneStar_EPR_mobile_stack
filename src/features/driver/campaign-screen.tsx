@@ -6,8 +6,9 @@ import * as React from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 
 import { showMessage } from 'react-native-flash-message';
+import { AppLogo } from '@/components/app-logo';
 import { Text, View } from '@/components/ui';
-import { Camera, Clock, Play, StopCircle } from '@/components/ui/icons';
+import { Camera, Clipboard, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import {
   endShift,
@@ -30,12 +31,7 @@ function getStatusColor(activeShift: boolean, status: string): string {
 function CampaignHeader({ right }: { right: React.ReactNode }) {
   return (
     <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
-      <View className="flex-row items-center gap-2">
-        <View className="size-7 items-center justify-center rounded-lg bg-primary">
-          <Text className="text-xs font-bold text-white">AD</Text>
-        </View>
-        <Text className="text-base font-semibold">My Campaign</Text>
-      </View>
+      <AppLogo size="sm" showText />
       {right}
     </View>
   );
@@ -43,17 +39,24 @@ function CampaignHeader({ right }: { right: React.ReactNode }) {
 
 function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
-          <TouchableOpacity onPress={onSignOut}>
-            <Text className="text-sm text-neutral-500">Sign out</Text>
+          <TouchableOpacity
+            onPress={onSignOut}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+          >
+            <LogOut color="#737373" width={18} height={18} />
           </TouchableOpacity>
         )}
       />
       <View className="flex-1 items-center justify-center p-6">
-        <View className="w-full items-center rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
-          <Text className="text-center text-sm text-neutral-500">
+        <View className="w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
+          <View className="size-14 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-700">
+            <Clipboard color="#a3a3a3" width={28} height={28} />
+          </View>
+          <Text className="text-center text-sm font-medium text-neutral-500">
             No active campaign assigned to you today.
           </Text>
         </View>
@@ -64,9 +67,10 @@ function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
 
 function ShiftStatusBadge({ startedAt }: { startedAt: string }) {
   return (
-    <View className="flex-row items-center gap-2 rounded-lg bg-green-50 px-3 py-2">
-      <Clock color="#15803d" width={14} height={14} />
-      <Text className="text-sm text-green-700">
+    <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2.5 dark:bg-green-900/30">
+      <View className="size-2 rounded-full bg-green-500" />
+      <Clock color="#16a34a" width={14} height={14} />
+      <Text className="text-sm font-medium text-green-700 dark:text-green-400">
         Shift started at
         {' '}
         {format(new Date(startedAt), 'h:mm a')}
@@ -98,11 +102,12 @@ function ShiftActions({
         testID="start-shift-button"
         onPress={onStartShift}
         disabled={isStartPending}
-        className="h-14 items-center justify-center rounded-xl bg-green-500 disabled:opacity-50"
+        activeOpacity={0.8}
+        className="h-14 items-center justify-center rounded-xl bg-green-600 disabled:opacity-50"
       >
         <View className="flex-row items-center gap-2">
           {isStartPending
-            ? <Text className="text-base font-semibold text-white">Starting...</Text>
+            ? <ActivityIndicator color="white" />
             : (
                 <>
                   <Play color="#fff" width={18} height={18} />
@@ -118,6 +123,7 @@ function ShiftActions({
       <TouchableOpacity
         testID="upload-photo-button"
         onPress={onUploadPhoto}
+        activeOpacity={0.8}
         className="h-14 items-center justify-center rounded-xl bg-primary"
       >
         <View className="flex-row items-center gap-2">
@@ -129,11 +135,12 @@ function ShiftActions({
         testID="end-shift-button"
         onPress={onEndShift}
         disabled={isEndPending}
-        className="h-14 items-center justify-center rounded-xl border border-red-300 disabled:opacity-50"
+        activeOpacity={0.8}
+        className="h-14 items-center justify-center rounded-xl border border-red-200 bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-red-900/20"
       >
         <View className="flex-row items-center gap-2">
           {isEndPending
-            ? <Text className="text-base font-semibold text-red-500">Ending...</Text>
+            ? <ActivityIndicator color="#ef4444" />
             : (
                 <>
                   <StopCircle color="#ef4444" width={18} height={18} />
@@ -244,17 +251,21 @@ export function CampaignScreen() {
   const statusColor = getStatusColor(!!activeShift, campaign.status);
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
           <View className="flex-row items-center gap-2">
-            <View className={`rounded-full px-2 py-1 ${statusColor}`}>
-              <Text className="text-xs font-medium">
+            <View className={`rounded-full px-2.5 py-1 ${statusColor}`}>
+              <Text className="text-xs font-medium capitalize">
                 {activeShift ? 'Active' : campaign.status}
               </Text>
             </View>
-            <TouchableOpacity onPress={signOut}>
-              <Text className="text-sm text-neutral-500">Sign out</Text>
+            <TouchableOpacity
+              onPress={signOut}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+            >
+              <LogOut color="#737373" width={18} height={18} />
             </TouchableOpacity>
           </View>
         )}

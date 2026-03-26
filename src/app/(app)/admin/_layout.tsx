@@ -1,53 +1,63 @@
 import { Tabs } from 'expo-router';
+import * as React from 'react';
 import { Platform } from 'react-native';
 
-import { Text } from '@/components/ui';
+import { BarChart, Clipboard, Plus, Users } from '@/components/ui/icons';
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  return (
-    <Text className={`text-xs ${focused ? 'font-semibold text-primary' : 'text-gray-500'}`}>
-      {label}
-    </Text>
-  );
-}
+const ACTIVE = '#1d4ed8';
+const INACTIVE = '#a3a3a3';
 
 export default function AdminTabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor: ACTIVE,
+        tabBarInactiveTintColor: INACTIVE,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: '#e5e5e5',
           paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-          paddingTop: 8,
+          paddingTop: 6,
           height: Platform.OS === 'ios' ? 80 : 60,
         },
-        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="campaigns"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Campaigns" focused={focused} />,
+          title: 'Campaigns',
+          tabBarIcon: ({ focused }) => (
+            <Clipboard color={focused ? ACTIVE : INACTIVE} width={20} height={20} />
+          ),
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Create" focused={focused} />,
+          title: 'Create',
+          tabBarIcon: ({ focused }) => (
+            <Plus color={focused ? ACTIVE : INACTIVE} width={20} height={20} />
+          ),
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Reports" focused={focused} />,
+          title: 'Reports',
+          tabBarIcon: ({ focused }) => (
+            <BarChart color={focused ? ACTIVE : INACTIVE} width={20} height={20} />
+          ),
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Users" focused={focused} />,
+          title: 'Users',
+          tabBarIcon: ({ focused }) => (
+            <Users color={focused ? ACTIVE : INACTIVE} width={20} height={20} />
+          ),
         }}
       />
     </Tabs>

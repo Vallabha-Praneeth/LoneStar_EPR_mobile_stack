@@ -4,16 +4,29 @@ import { format } from 'date-fns';
 import * as React from 'react';
 
 import { ActivityIndicator, FlatList } from 'react-native';
+import { AppLogo } from '@/components/app-logo';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
+import { BarChart, Camera, CheckCircle, Clock } from '@/components/ui/icons';
 import { fetchReportData } from '@/lib/api/admin/reports';
 
-function StatCard({ value, label, color }: { value: number; label: string; color?: string }) {
+type StatCardProps = {
+  value: number | string;
+  label: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  valueColor?: string;
+};
+
+function StatCard({ value, label, icon, iconBg, valueColor }: StatCardProps) {
   return (
     <View className="flex-1 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-800">
-      <Text className={`text-lg font-bold ${color ?? ''}`}>{value}</Text>
-      <Text className="text-xs text-neutral-500">{label}</Text>
+      <View className={`mb-2 size-7 items-center justify-center rounded-lg ${iconBg}`}>
+        {icon}
+      </View>
+      <Text className={`text-lg font-bold ${valueColor ?? ''}`}>{value}</Text>
+      <Text className="text-[10px] font-medium tracking-wider text-neutral-400 uppercase">{label}</Text>
     </View>
   );
 }
@@ -26,29 +39,29 @@ function ReportCampaignCard({ item }: { item: ReportCampaign }) {
   return (
     <View className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
       <View className="mb-2 flex-row items-center justify-between">
-        <Text className="flex-1 font-semibold" numberOfLines={1}>{item.title}</Text>
+        <Text className="flex-1 text-[15px] font-semibold" numberOfLines={1}>{item.title}</Text>
         <StatusBadge status={item.status} />
       </View>
       <Text className="text-sm text-neutral-500">
         {item.clients?.name ?? 'No client'}
-        {' • '}
+        {' · '}
         {item.driver_profile?.display_name ?? 'Unassigned'}
       </Text>
       <Text className="mt-1 text-xs text-neutral-400">
         {format(new Date(item.campaign_date), 'MMM d, yyyy')}
       </Text>
       <View className="mt-3 flex-row gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-700">
-        <View className="items-center">
+        <View className="flex-row items-center gap-1.5">
+          <Camera color="#a3a3a3" width={12} height={12} />
           <Text className="text-sm font-semibold">{photos}</Text>
-          <Text className="text-xs text-neutral-500">Photos</Text>
         </View>
-        <View className="items-center">
+        <View className="flex-row items-center gap-1.5">
+          <CheckCircle color="#16a34a" width={12} height={12} />
           <Text className="text-sm font-semibold text-green-600">{approved}</Text>
-          <Text className="text-xs text-neutral-500">Approved</Text>
         </View>
-        <View className="items-center">
+        <View className="flex-row items-center gap-1.5">
+          <Clock color="#a3a3a3" width={12} height={12} />
           <Text className="text-sm font-semibold">{shifts}</Text>
-          <Text className="text-xs text-neutral-500">Shifts</Text>
         </View>
       </View>
     </View>
@@ -80,25 +93,44 @@ export function ReportsScreen() {
   const totalShifts = filtered.reduce((sum, c) => sum + c.driver_shifts.length, 0);
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <View testID="reports-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
-        <View className="flex-row items-center gap-2">
-          <View className="size-7 items-center justify-center rounded-lg bg-primary">
-            <Text className="text-xs font-bold text-white">AD</Text>
-          </View>
-          <Text className="text-base font-semibold">Reports</Text>
-        </View>
+        <AppLogo size="sm" showText />
       </View>
 
       <View className="px-4 pt-3">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search campaigns..." />
       </View>
 
-      <View className="flex-row gap-3 px-4 pt-3">
-        <StatCard value={filtered.length} label="Campaigns" />
-        <StatCard value={totalPhotos} label="Photos" />
-        <StatCard value={approvedPhotos} label="Approved" color="text-green-600" />
-        <StatCard value={totalShifts} label="Shifts" />
+      <View className="flex-row gap-2 px-4 pt-3">
+        <StatCard
+          value={filtered.length}
+          label="Campaigns"
+          icon={<BarChart color="#1d4ed8" width={14} height={14} />}
+          iconBg="bg-primary/10"
+          valueColor="text-primary"
+        />
+        <StatCard
+          value={totalPhotos}
+          label="Photos"
+          icon={<Camera color="#d97706" width={14} height={14} />}
+          iconBg="bg-amber-50"
+          valueColor="text-amber-700"
+        />
+        <StatCard
+          value={approvedPhotos}
+          label="Approved"
+          icon={<CheckCircle color="#16a34a" width={14} height={14} />}
+          iconBg="bg-green-50"
+          valueColor="text-green-700"
+        />
+        <StatCard
+          value={totalShifts}
+          label="Shifts"
+          icon={<Clock color="#7c3aed" width={14} height={14} />}
+          iconBg="bg-violet-50"
+          valueColor="text-violet-700"
+        />
       </View>
 
       {isLoading

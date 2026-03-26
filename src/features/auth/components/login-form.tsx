@@ -4,6 +4,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { z } from 'zod';
 
+import { AppLogo } from '@/components/app-logo';
 import { Button, Input, Text, View } from '@/components/ui';
 
 export type FormType = {
@@ -44,13 +45,11 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
     >
       <View className="flex-1 justify-center p-6">
         <View className="mb-8 items-center justify-center">
-          <View className="mb-4 size-16 items-center justify-center rounded-2xl bg-primary">
-            <Text className="text-xl font-bold text-white">AD</Text>
-          </View>
-          <Text testID="form-title" className="pb-2 text-center text-3xl font-bold">
+          <AppLogo size="lg" showText={false} />
+          <Text testID="form-title" className="mt-4 pb-1 text-center text-3xl font-bold tracking-tight">
             AdTruck
           </Text>
-          <Text className="text-center text-neutral-500">
+          <Text className="text-center text-sm text-neutral-500">
             Sign in to continue
           </Text>
         </View>
@@ -97,7 +96,9 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
 
         {error
           ? (
-              <Text className="mb-2 text-center text-sm text-danger-500 dark:text-danger-400">{error}</Text>
+              <View className="mb-2 rounded-xl bg-danger-500/10 px-4 py-3">
+                <Text className="text-center text-sm font-medium text-danger-500 dark:text-danger-400">{error}</Text>
+              </View>
             )
           : null}
 

@@ -26,8 +26,8 @@ const IS_IOS_SIMULATOR = Platform.OS === 'ios' && !Device.isDevice;
 function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGallery: () => void }) {
   return (
     <View className="items-center gap-4 rounded-xl border-2 border-dashed border-neutral-200 p-8 dark:border-neutral-600">
-      <View className="size-16 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-700">
-        <Camera color="#6b7280" width={32} height={32} />
+      <View className="size-16 items-center justify-center rounded-2xl bg-primary/10">
+        <Camera color="#1d4ed8" width={32} height={32} />
       </View>
       <Text className="text-center text-sm text-neutral-500">
         Take a photo or choose from gallery
@@ -35,7 +35,8 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
       <View className="w-full flex-row gap-3">
         <TouchableOpacity
           onPress={onCamera}
-          className="h-12 flex-1 items-center justify-center rounded-xl bg-primary"
+          activeOpacity={0.8}
+          className="h-14 flex-1 items-center justify-center rounded-xl bg-primary"
         >
           <View className="flex-row items-center gap-2">
             <Camera color="#fff" width={16} height={16} />
@@ -45,7 +46,8 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
         <TouchableOpacity
           testID="gallery-button"
           onPress={onGallery}
-          className="h-12 flex-1 items-center justify-center rounded-xl border border-neutral-300 dark:border-neutral-600"
+          activeOpacity={0.8}
+          className="h-14 flex-1 items-center justify-center rounded-xl border border-neutral-300 dark:border-neutral-600"
         >
           <View className="flex-row items-center gap-2">
             <ImageIcon color="#525252" width={16} height={16} />
@@ -59,18 +61,20 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
 
 function PhotoPreview({ uri, onClear }: { uri: string; onClear: () => void }) {
   return (
-    <View className="relative">
+    <View className="relative overflow-hidden rounded-xl">
       <Image
         source={{ uri }}
-        className="w-full rounded-xl"
+        className="w-full"
         style={{ aspectRatio: 4 / 3 }}
         resizeMode="cover"
       />
       <TouchableOpacity
         onPress={onClear}
-        className="absolute top-2 right-2 rounded-lg bg-white/80 px-3 py-1"
+        activeOpacity={0.8}
+        className="absolute top-3 right-3 flex-row items-center gap-1 rounded-lg bg-black/60 px-3 py-1.5"
       >
-        <Text className="text-xs font-medium text-neutral-600">Change</Text>
+        <Camera color="#fff" width={12} height={12} />
+        <Text className="text-xs font-medium text-white">Retake</Text>
       </TouchableOpacity>
     </View>
   );
@@ -169,7 +173,8 @@ export function UploadScreen() {
             testID="submit-photo-button"
             onPress={() => uploadMutation.mutate()}
             disabled={!imageUri || !campaign || uploadMutation.isPending}
-            className="h-14 items-center justify-center rounded-xl bg-primary disabled:opacity-40"
+            activeOpacity={0.8}
+            className="h-14 items-center justify-center rounded-xl bg-primary disabled:opacity-50"
           >
             {uploadMutation.isPending
               ? <ActivityIndicator color="white" />
