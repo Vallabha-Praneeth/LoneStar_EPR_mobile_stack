@@ -52,7 +52,7 @@ jobs:
         run: npm run install-maestro # # We use npm because we don't need to install deps again
 
       - name: Download Test APK
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v8
         with:
           name: test-apk
           path: ${{ github.workspace }}
