@@ -8,7 +8,7 @@ import { AppLogo } from '@/components/app-logo';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
-import { BarChart, Camera, CheckCircle, Clock } from '@/components/ui/icons';
+import { BarChart, Camera, Clock } from '@/components/ui/icons';
 import { fetchReportData } from '@/lib/api/admin/reports';
 
 type StatCardProps = {
@@ -33,7 +33,6 @@ function StatCard({ value, label, icon, iconBg, valueColor }: StatCardProps) {
 
 function ReportCampaignCard({ item }: { item: ReportCampaign }) {
   const photos = item.campaign_photos.length;
-  const approved = item.campaign_photos.filter(p => p.status === 'approved').length;
   const shifts = item.driver_shifts.length;
 
   return (
@@ -54,10 +53,6 @@ function ReportCampaignCard({ item }: { item: ReportCampaign }) {
         <View className="flex-row items-center gap-1.5">
           <Camera color="#a3a3a3" width={12} height={12} />
           <Text className="text-sm font-semibold">{photos}</Text>
-        </View>
-        <View className="flex-row items-center gap-1.5">
-          <CheckCircle color="#16a34a" width={12} height={12} />
-          <Text className="text-sm font-semibold text-green-600">{approved}</Text>
         </View>
         <View className="flex-row items-center gap-1.5">
           <Clock color="#a3a3a3" width={12} height={12} />
@@ -86,10 +81,6 @@ export function ReportsScreen() {
   });
 
   const totalPhotos = filtered.reduce((sum, c) => sum + c.campaign_photos.length, 0);
-  const approvedPhotos = filtered.reduce(
-    (sum, c) => sum + c.campaign_photos.filter(p => p.status === 'approved').length,
-    0,
-  );
   const totalShifts = filtered.reduce((sum, c) => sum + c.driver_shifts.length, 0);
 
   return (
@@ -116,13 +107,6 @@ export function ReportsScreen() {
           icon={<Camera color="#d97706" width={14} height={14} />}
           iconBg="bg-amber-50"
           valueColor="text-amber-700"
-        />
-        <StatCard
-          value={approvedPhotos}
-          label="Approved"
-          icon={<CheckCircle color="#16a34a" width={14} height={14} />}
-          iconBg="bg-green-50"
-          valueColor="text-green-700"
         />
         <StatCard
           value={totalShifts}

@@ -18,7 +18,8 @@ export function UploadSuccessScreen() {
         <View className="items-center gap-1">
           <Text className="text-center text-xl font-bold">Photo Submitted!</Text>
           <Text className="text-center text-sm/5 text-neutral-500">
-            Your photo has been uploaded and will appear in the client gallery.
+            Your photo has been submitted successfully and is now visible to the
+            client.
           </Text>
         </View>
 

@@ -5,13 +5,12 @@ export type PhotoRow = {
   storage_path: string;
   note: string | null;
   submitted_at: string;
-  status: 'pending' | 'approved' | 'rejected';
 };
 
 export async function fetchCampaignPhotos(campaignId: string): Promise<PhotoRow[]> {
   const { data, error } = await supabase
     .from('campaign_photos')
-    .select('id, storage_path, note, submitted_at, status')
+    .select('id, storage_path, note, submitted_at')
     .eq('campaign_id', campaignId)
     .order('submitted_at', { ascending: true });
 
