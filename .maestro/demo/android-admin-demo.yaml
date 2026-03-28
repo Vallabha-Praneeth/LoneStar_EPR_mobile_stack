@@ -1,0 +1,73 @@
+appId: com.adtruck_driver_native.development
+env:
+  APP_ID: com.adtruck_driver_native.development
+  USERNAME: admin@adtruck.com
+  PASSWORD: mawqex-rYsneq-kynja5
+---
+# Demo: Admin flow on Android (no clearState — works with Expo Go)
+
+- openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8083%3FdisableOnboarding%3D1'
+
+# Dismiss dev menu overlay if it appears
+- runFlow:
+    when:
+      visible: Continue
+    commands:
+      - tapOn: Continue
+
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 30000
+
+# Login as admin
+- runFlow: ../utils/admin-login.yaml
+
+- assertVisible:
+    id: sign-out-button
+
+# View campaign detail
+- tapOn:
+    text: 'Acme Corp.*'
+    index: 0
+- extendedWaitUntil:
+    visible: Client
+    timeout: 10000
+- assertVisible: Client
+- assertVisible: Driver
+
+# Back to list
+- tapOn:
+    id: back-button
+
+# Navigate tabs — Reports
+- tapOn:
+    point: "675,2310"
+- extendedWaitUntil:
+    visible:
+      id: reports-screen
+    timeout: 10000
+
+# Users tab
+- tapOn:
+    point: "945,2310"
+- extendedWaitUntil:
+    visible:
+      id: users-screen
+    timeout: 10000
+
+# Back to Campaigns
+- tapOn:
+    point: "135,2310"
+- extendedWaitUntil:
+    visible:
+      id: sign-out-button
+    timeout: 5000
+
+# Sign out
+- tapOn:
+    id: sign-out-button
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 10000
