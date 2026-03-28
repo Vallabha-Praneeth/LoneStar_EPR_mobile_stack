@@ -31,3 +31,65 @@ export async function toggleUserActive(userId: string, isActive: boolean): Promi
   if (error)
     throw error;
 }
+
+export type CreateDriverInput = {
+  username: string;
+  display_name: string;
+  password: string;
+};
+
+export async function createDriver(input: CreateDriverInput): Promise<{ id: string; display_name: string }> {
+  const { data, error } = await supabase.functions.invoke('create-user', {
+    body: {
+      role: 'driver',
+      username: input.username,
+      display_name: input.display_name,
+      password: input.password,
+    },
+  });
+
+  if (error)
+    throw new Error(error.message || 'Failed to create driver');
+  if (data?.error)
+    throw new Error(data.error);
+
+  return data.user;
+}
+
+export async function resetUserPassword(userId: string, newPassword: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('reset-user-password', {
+    body: { user_id: userId, new_password: newPassword },
+  });
+
+  if (error)
+    throw new Error(error.message || 'Failed to reset password');
+  if (data?.error)
+    throw new Error(data.error);
+}
+
+export type CreateClientUserInput = {
+  email: string;
+  display_name: string;
+  password: string;
+  client_id: string;
+};
+
+export async function createClientUser(input: CreateClientUserInput): Promise<{ id: string; display_name: string }> {
+  const { data, error } = await supabase.functions.invoke('create-user', {
+    body: {
+      role: 'client',
+      username: input.email,
+      display_name: input.display_name,
+      password: input.password,
+      email: input.email,
+      client_id: input.client_id,
+    },
+  });
+
+  if (error)
+    throw new Error(error.message || 'Failed to create client user');
+  if (data?.error)
+    throw new Error(data.error);
+
+  return data.user;
+}
