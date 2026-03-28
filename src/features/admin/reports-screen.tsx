@@ -20,7 +20,6 @@ function StatCard({ value, label, color }: { value: number; label: string; color
 
 function ReportCampaignCard({ item }: { item: ReportCampaign }) {
   const photos = item.campaign_photos.length;
-  const approved = item.campaign_photos.filter(p => p.status === 'approved').length;
   const shifts = item.driver_shifts.length;
 
   return (
@@ -41,10 +40,6 @@ function ReportCampaignCard({ item }: { item: ReportCampaign }) {
         <View className="items-center">
           <Text className="text-sm font-semibold">{photos}</Text>
           <Text className="text-xs text-neutral-500">Photos</Text>
-        </View>
-        <View className="items-center">
-          <Text className="text-sm font-semibold text-green-600">{approved}</Text>
-          <Text className="text-xs text-neutral-500">Approved</Text>
         </View>
         <View className="items-center">
           <Text className="text-sm font-semibold">{shifts}</Text>
@@ -73,10 +68,6 @@ export function ReportsScreen() {
   });
 
   const totalPhotos = filtered.reduce((sum, c) => sum + c.campaign_photos.length, 0);
-  const approvedPhotos = filtered.reduce(
-    (sum, c) => sum + c.campaign_photos.filter(p => p.status === 'approved').length,
-    0,
-  );
   const totalShifts = filtered.reduce((sum, c) => sum + c.driver_shifts.length, 0);
 
   return (
@@ -97,7 +88,6 @@ export function ReportsScreen() {
       <View className="flex-row gap-3 px-4 pt-3">
         <StatCard value={filtered.length} label="Campaigns" />
         <StatCard value={totalPhotos} label="Photos" />
-        <StatCard value={approvedPhotos} label="Approved" color="text-green-600" />
         <StatCard value={totalShifts} label="Shifts" />
       </View>
 

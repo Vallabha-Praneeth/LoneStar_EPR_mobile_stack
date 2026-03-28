@@ -17,8 +17,8 @@ export function UploadSuccessScreen() {
 
         <Text className="text-center text-xl font-bold">Photo Submitted!</Text>
         <Text className="text-center text-sm text-neutral-500">
-          Your photo is pending admin approval and will appear on the client
-          gallery once approved.
+          Your photo has been submitted successfully and is now visible to the
+          client.
         </Text>
 
         <View className="mt-2 w-full gap-3">

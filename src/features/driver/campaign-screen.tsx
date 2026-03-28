@@ -163,25 +163,9 @@ function RecentUploadsList({ photos }: { photos: CampaignPhoto[] }) {
               {format(new Date(photo.submitted_at), 'h:mm a')}
             </Text>
           </View>
-          <View
-            className={`rounded-full px-2 py-1 ${
-              photo.status === 'approved'
-                ? 'bg-green-100'
-                : photo.status === 'rejected'
-                  ? 'bg-red-100'
-                  : 'bg-yellow-100'
-            }`}
-          >
-            <Text
-              className={`text-xs font-medium ${
-                photo.status === 'approved'
-                  ? 'text-green-700'
-                  : photo.status === 'rejected'
-                    ? 'text-red-700'
-                    : 'text-yellow-700'
-              }`}
-            >
-              {photo.status}
+          <View className="rounded-full bg-green-100 px-2 py-1">
+            <Text className="text-xs font-medium text-green-700">
+              Uploaded
             </Text>
           </View>
         </View>

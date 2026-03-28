@@ -94,7 +94,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
 function PhotoCard({
   photo,
 }: {
-  photo: { id: string; status: string; submitted_at: string; note: string | null; storage_path: string };
+  photo: { id: string; submitted_at: string; note: string | null; storage_path: string };
 }) {
   const [url, setUrl] = React.useState<string | null>(null);
 
@@ -117,7 +117,6 @@ function PhotoCard({
         <Text className="text-xs text-neutral-500">
           {format(new Date(photo.submitted_at), 'MMM d, h:mm a')}
         </Text>
-        <StatusBadge status={photo.status} />
       </View>
       {photo.note && (
         <Text className="px-3 pb-3 text-xs text-neutral-500">{photo.note}</Text>

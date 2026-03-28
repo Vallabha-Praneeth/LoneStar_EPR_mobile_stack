@@ -7,7 +7,7 @@ export type DriverCampaignData = {
   route_code: string | null;
   status: 'draft' | 'pending' | 'active' | 'completed';
   driver_shifts: { id: string; started_at: string; ended_at: string | null }[];
-  campaign_photos: { id: string; status: string; submitted_at: string }[];
+  campaign_photos: { id: string; submitted_at: string }[];
 };
 
 export async function fetchDriverCampaign(driverId: string): Promise<DriverCampaignData | null> {
@@ -15,7 +15,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, title, campaign_date, route_code, status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, status, submitted_at )',
+      'id, title, campaign_date, route_code, status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at )',
     )
     .eq('driver_profile_id', driverId)
     .gte('campaign_date', today)
