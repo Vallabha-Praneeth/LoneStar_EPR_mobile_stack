@@ -4,8 +4,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'success' | 'danger' | 'warning
   draft: 'default',
   pending: 'warning',
   active: 'success',
-  approved: 'success',
-  rejected: 'danger',
   completed: 'default',
 };
 

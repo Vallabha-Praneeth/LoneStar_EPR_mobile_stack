@@ -1,0 +1,89 @@
+appId: com.adtruck_driver_native.development
+env:
+  APP_ID: com.adtruck_driver_native.development
+  USERNAME: driver1
+  PASSWORD: DriverPass123!
+---
+# Demo: Driver shift flow on Android (no clearState — works with Expo Go)
+
+- openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8083%3FdisableOnboarding%3D1'
+
+# Dismiss dev menu overlay if it appears
+- runFlow:
+    when:
+      visible: Continue
+    commands:
+      - tapOn: Continue
+
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 30000
+
+# Login as driver
+- runFlow: ../utils/driver-login.yaml
+
+# Start shift if not already active
+- runFlow:
+    when:
+      visible:
+        id: start-shift-button
+    commands:
+      - tapOn:
+          id: start-shift-button
+
+- assertVisible:
+    id: end-shift-button
+
+# Upload photo
+- tapOn:
+    id: upload-photo-button
+- assertVisible: Upload Photo
+
+- addMedia:
+    - ../test-assets/sample-photo.jpg
+
+- tapOn:
+    id: gallery-button
+
+# Grant photo/media permission
+- runFlow:
+    when:
+      visible: Allow
+    commands:
+      - tapOn: Allow
+
+# Select first photo in Android media picker
+- extendedWaitUntil:
+    visible:
+      text: '.*'
+    timeout: 5000
+- tapOn:
+    text: 'Photo .*'
+    index: 0
+    optional: true
+- tapOn:
+    text: '.*'
+    index: 0
+    optional: true
+
+# Submit
+- scroll
+- assertVisible:
+    id: submit-photo-button
+- tapOn:
+    id: submit-photo-button
+
+# Success
+- assertVisible: Photo Submitted!
+- tapOn:
+    id: back-to-campaign-button
+
+# End shift
+- assertVisible:
+    id: end-shift-button
+- tapOn:
+    id: end-shift-button
+
+- assertVisible:
+    id: login-button
