@@ -22,6 +22,35 @@ export async function fetchClients(): Promise<ClientOption[]> {
   return (data ?? []) as ClientOption[];
 }
 
+export async function createClientOrg(input: { name: string; phone_number: string | null }): Promise<ClientOption> {
+  const { data, error } = await supabase
+    .from('clients')
+    .insert({ name: input.name, is_active: true, phone_number: input.phone_number })
+    .select('id, name')
+    .single();
+
+  if (error)
+    throw error;
+  return data as ClientOption;
+}
+
+export type RouteOption = {
+  id: string;
+  name: string;
+};
+
+export async function fetchRoutes(): Promise<RouteOption[]> {
+  const { data, error } = await supabase
+    .from('routes')
+    .select('id, name')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error)
+    throw error;
+  return (data ?? []) as RouteOption[];
+}
+
 export async function fetchDrivers(): Promise<DriverOption[]> {
   const { data, error } = await supabase
     .from('profiles')

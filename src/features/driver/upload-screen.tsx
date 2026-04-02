@@ -80,6 +80,17 @@ function PhotoPreview({ uri, onClear }: { uri: string; onClear: () => void }) {
   );
 }
 
+function UploadHeader({ onBack }: { onBack: () => void }) {
+  return (
+    <View className="flex-row items-center gap-3 border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
+      <TouchableOpacity onPress={onBack}>
+        <ChevronLeft color="#737373" width={20} height={20} />
+      </TouchableOpacity>
+      <Text className="text-base font-semibold">Upload Photo</Text>
+    </View>
+  );
+}
+
 export function UploadScreen() {
   const router = useRouter();
   const profile = useAuthStore.use.profile();
@@ -99,12 +110,10 @@ export function UploadScreen() {
       uploadPhoto({ imageUri: imageUri!, campaignId: campaign!.id, driverId: profile!.id, note }),
     onSuccess: (photoId: string) => {
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
-      // Fire-and-forget WhatsApp notification to client
-      supabase.functions
-        .invoke('send-whatsapp-photo', {
-          body: { campaignId: campaign!.id, photoId },
-        })
-        .catch(() => {}); // silent — don't block the driver flow
+      const body = { campaignId: campaign!.id, photoId };
+      // Fire-and-forget: WhatsApp notification + Google Drive sync
+      supabase.functions.invoke('send-whatsapp-photo', { body }).catch(() => {});
+      supabase.functions.invoke('sync-photo-to-drive', { body }).catch(() => {});
       router.replace('/(app)/upload-success');
     },
     onError: (err: Error) =>
@@ -141,12 +150,7 @@ export function UploadScreen() {
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-      <View className="flex-row items-center gap-3 border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
-        <TouchableOpacity onPress={() => router.back()}>
-          <ChevronLeft color="#737373" width={20} height={20} />
-        </TouchableOpacity>
-        <Text className="text-base font-semibold">Upload Photo</Text>
-      </View>
+      <UploadHeader onBack={() => router.back()} />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}

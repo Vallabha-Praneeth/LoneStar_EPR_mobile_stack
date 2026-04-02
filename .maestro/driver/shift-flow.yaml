@@ -29,7 +29,7 @@ env:
           clearState: true
           arguments:
             isE2E: 'true'
-      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8083%3FdisableOnboarding%3D1'
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 
 # Android launch — clearState wipes app data including the saved Metro URL.
 # We must: (1) clear state, (2) stop app, (3) open deep link which both
@@ -46,7 +46,7 @@ env:
             isE2E: 'true'
       - stopApp:
           appId: ${APP_ID_ANDROID}
-      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8083%3FdisableOnboarding%3D1'
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081%3FdisableOnboarding%3D1'
       # Dismiss onboarding overlay if it appears
       - runFlow:
           when:
@@ -76,13 +76,18 @@ env:
           id: start-shift-button
 
 # Confirm shift is active (end-shift-button is now visible)
-- assertVisible:
-    id: end-shift-button
+# Wait for the mutation + query invalidation to complete
+- extendedWaitUntil:
+    visible:
+      id: end-shift-button
+    timeout: 15000
 
 # Navigate to upload screen
 - tapOn:
     id: upload-photo-button
-- assertVisible: Upload Photo
+- extendedWaitUntil:
+    visible: Upload Photo
+    timeout: 10000
 
 # Seed a photo into the simulator library before opening the picker.
 # addMedia is Maestro's first-class API for this — no coordinate taps needed.
@@ -149,18 +154,24 @@ env:
     id: submit-photo-button
 
 # Upload success screen
-- assertVisible: Photo Submitted!
+- extendedWaitUntil:
+    visible: Photo Submitted!
+    timeout: 15000
 - tapOn:
     id: back-to-campaign-button
 
 # Back on campaign screen — shift still active
-- assertVisible:
-    id: end-shift-button
+- extendedWaitUntil:
+    visible:
+      id: end-shift-button
+    timeout: 10000
 
 # End shift — triggers optimistic signOut (local state cleared immediately),
 # then Supabase session revoked in background. Navigation to login is instant.
 - tapOn:
     id: end-shift-button
 
-- assertVisible:
-    id: login-button
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 15000

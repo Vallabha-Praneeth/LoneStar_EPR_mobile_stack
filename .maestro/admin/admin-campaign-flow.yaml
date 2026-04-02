@@ -1,6 +1,7 @@
 appId: ${APP_ID}
 env:
-  APP_ID: com.adtruck_driver_native.development
+  APP_ID: com.adtruck-driver-native.development
+  APP_ID_ANDROID: com.adtruck_driver_native.development
   USERNAME: admin@adtruck.com
   PASSWORD: mawqex-rYsneq-kynja5
 ---
@@ -16,7 +17,7 @@ env:
       - launchApp:
           appId: ${APP_ID}
           clearState: true
-      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8083%3FdisableOnboarding%3D1'
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 
 # Android launch — clearState + stop + deep link to set Metro URL
 - runFlow:
@@ -24,11 +25,11 @@ env:
       platform: Android
     commands:
       - launchApp:
-          appId: ${APP_ID}
+          appId: ${APP_ID_ANDROID}
           clearState: true
       - stopApp:
-          appId: ${APP_ID}
-      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8083%3FdisableOnboarding%3D1'
+          appId: ${APP_ID_ANDROID}
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081%3FdisableOnboarding%3D1'
       # Dismiss dev menu overlay if it appears
       - runFlow:
           when:

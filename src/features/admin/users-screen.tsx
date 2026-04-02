@@ -16,7 +16,7 @@ import { showMessage } from 'react-native-flash-message';
 import { SearchBar } from '@/components/search-bar';
 import { Text, View } from '@/components/ui';
 import { Modal, useModal } from '@/components/ui/modal';
-import { fetchClients } from '@/lib/api/admin/selectors';
+import { createClientOrg, fetchClients } from '@/lib/api/admin/selectors';
 import { createClientUser, createDriver, fetchUsers, resetUserPassword, toggleUserActive } from '@/lib/api/admin/users';
 
 const ROLE_COLORS: Record<string, string> = {
@@ -239,6 +239,57 @@ function ClientSelector({
   );
 }
 
+function CreateClientOrgForm({ onSuccess }: { onSuccess: () => void }) {
+  const [name, setName] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: createClientOrg,
+    onSuccess: (client) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
+      showMessage({ message: `Client "${client.name}" created`, type: 'success' });
+      setName('');
+      setPhone('');
+      onSuccess();
+    },
+    onError: (err: Error) => Alert.alert('Error', err.message),
+  });
+
+  function handleSubmit() {
+    const trimmedName = name.trim();
+    if (!trimmedName)
+      return Alert.alert('Validation', 'Client name is required');
+
+    mutation.mutate({ name: trimmedName, phone_number: phone.trim() || null });
+  }
+
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View className="gap-4 px-4 pb-8">
+        <FormField label="Client Name *">
+          <FormInput value={name} onChangeText={setName} placeholder="e.g. Acme Corp" />
+        </FormField>
+        <FormField label="WhatsApp Number">
+          <FormInput value={phone} onChangeText={setPhone} placeholder="e.g. +919494348091" />
+        </FormField>
+        <Text className="text-xs text-neutral-400">
+          E.164 format. Used for WhatsApp photo notifications.
+        </Text>
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={mutation.isPending}
+          className="mt-2 h-12 items-center justify-center rounded-xl bg-primary disabled:opacity-50"
+        >
+          {mutation.isPending
+            ? <ActivityIndicator color="#fff" />
+            : <Text className="font-semibold text-white">Add Client</Text>}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
 function CreateClientUserForm({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = React.useState('');
   const [displayName, setDisplayName] = React.useState('');
@@ -364,24 +415,33 @@ function ResetPasswordForm({ user, onSuccess }: { user: UserRow; onSuccess: () =
   );
 }
 
-function UsersHeader({ onAddClient, onAddDriver }: { onAddClient: () => void; onAddDriver: () => void }) {
+function UsersHeader({ onAddClientOrg, onAddClientUser, onAddDriver }: { onAddClientOrg: () => void; onAddClientUser: () => void; onAddDriver: () => void }) {
   return (
-    <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
-      <View className="flex-row items-center gap-2">
-        <View className="size-7 items-center justify-center rounded-lg bg-primary">
-          <Text className="text-xs font-bold text-white">AD</Text>
-        </View>
-        <Text className="text-base font-semibold">Users</Text>
-      </View>
-      <View className="flex-row items-center gap-2">
-        <TouchableOpacity onPress={onAddClient}>
-          <View className="rounded-lg border border-primary px-3 py-1.5">
-            <Text className="text-xs font-semibold text-primary">+ Client</Text>
+    <View className="border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2">
+          <View className="size-7 items-center justify-center rounded-lg bg-primary">
+            <Text className="text-xs font-bold text-white">AD</Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onAddDriver}>
-          <View className="rounded-lg bg-primary px-3 py-1.5">
-            <Text className="text-xs font-semibold text-white">+ Driver</Text>
+          <Text className="text-base font-semibold">Users</Text>
+        </View>
+        <View className="flex-row items-center gap-2">
+          <TouchableOpacity onPress={onAddClientUser}>
+            <View className="rounded-lg border border-primary px-3 py-1.5">
+              <Text className="text-xs font-semibold text-primary">+ User</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onAddDriver}>
+            <View className="rounded-lg bg-primary px-3 py-1.5">
+              <Text className="text-xs font-semibold text-white">+ Driver</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View className="mt-2 flex-row">
+        <TouchableOpacity onPress={onAddClientOrg}>
+          <View className="rounded-lg border border-green-600 px-3 py-1.5">
+            <Text className="text-xs font-semibold text-green-600">+ Client Org</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -394,6 +454,7 @@ export function UsersScreen() {
   const [resetTarget, setResetTarget] = React.useState<UserRow | null>(null);
   const queryClient = useQueryClient();
   const createDriverModal = useModal();
+  const createClientOrgModal = useModal();
   const createClientUserModal = useModal();
   const resetPasswordModal = useModal();
 
@@ -437,7 +498,7 @@ export function UsersScreen() {
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-      <UsersHeader onAddClient={() => createClientUserModal.present()} onAddDriver={() => createDriverModal.present()} />
+      <UsersHeader onAddClientOrg={() => createClientOrgModal.present()} onAddClientUser={() => createClientUserModal.present()} onAddDriver={() => createDriverModal.present()} />
 
       <View className="px-4 pt-3">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search users..." />
@@ -464,6 +525,10 @@ export function UsersScreen() {
               )}
             />
           )}
+
+      <Modal ref={createClientOrgModal.ref} title="Add New Client" snapPoints={['50%']}>
+        <CreateClientOrgForm onSuccess={() => createClientOrgModal.dismiss()} />
+      </Modal>
 
       <Modal ref={createDriverModal.ref} title="Add New Driver" snapPoints={['55%']}>
         <CreateDriverForm onSuccess={() => createDriverModal.dismiss()} />

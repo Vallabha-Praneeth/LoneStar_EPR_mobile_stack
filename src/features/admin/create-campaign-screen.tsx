@@ -1,4 +1,4 @@
-import type { ClientOption, DriverOption } from '@/lib/api/admin/selectors';
+import type { ClientOption, DriverOption, RouteOption } from '@/lib/api/admin/selectors';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
@@ -16,7 +16,7 @@ import { AdminHeader } from '@/components/admin-header';
 import { Text, View } from '@/components/ui';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { createCampaign } from '@/lib/api/admin/campaigns';
-import { fetchClients, fetchDrivers } from '@/lib/api/admin/selectors';
+import { fetchClients, fetchDrivers, fetchRoutes } from '@/lib/api/admin/selectors';
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -104,11 +104,9 @@ type FormState = {
   campaignDate: string;
   clientId: string;
   driverProfileId: string;
-  routeCode: string;
+  routeId: string;
   internalNotes: string;
-  driverDailyWage: string;
-  transportCost: string;
-  otherCost: string;
+  clientBilledAmount: string;
 };
 
 function CampaignFormBody({
@@ -116,15 +114,19 @@ function CampaignFormBody({
   setField,
   clients,
   drivers,
+  routes,
   loadingClients,
   loadingDrivers,
+  loadingRoutes,
 }: {
   form: FormState;
   setField: <K extends keyof FormState>(key: K, val: FormState[K]) => void;
   clients: ClientOption[];
   drivers: DriverOption[];
+  routes: RouteOption[];
   loadingClients: boolean;
   loadingDrivers: boolean;
+  loadingRoutes: boolean;
 }) {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
@@ -148,20 +150,14 @@ function CampaignFormBody({
           : <SelectorList items={drivers} selectedId={form.driverProfileId} onSelect={v => setField('driverProfileId', v)} labelKey="display_name" />}
       </FormField>
 
-      <FormField label="Route Code">
-        <FormInput value={form.routeCode} onChangeText={v => setField('routeCode', v)} placeholder="e.g. RT-101" />
+      <FormField label="Route">
+        {loadingRoutes
+          ? <ActivityIndicator size="small" />
+          : <SelectorList items={routes} selectedId={form.routeId} onSelect={v => setField('routeId', v)} labelKey="name" />}
       </FormField>
 
-      <FormField label="Driver Daily Wage">
-        <FormInput value={form.driverDailyWage} onChangeText={v => setField('driverDailyWage', v)} placeholder="0" keyboardType="numeric" />
-      </FormField>
-
-      <FormField label="Transport Cost">
-        <FormInput value={form.transportCost} onChangeText={v => setField('transportCost', v)} placeholder="0" keyboardType="numeric" />
-      </FormField>
-
-      <FormField label="Other Cost">
-        <FormInput value={form.otherCost} onChangeText={v => setField('otherCost', v)} placeholder="0" keyboardType="numeric" />
+      <FormField label="Client Billed Amount">
+        <FormInput value={form.clientBilledAmount} onChangeText={v => setField('clientBilledAmount', v)} placeholder="0" keyboardType="numeric" />
       </FormField>
 
       <FormField label="Internal Notes">
@@ -181,11 +177,9 @@ export function CreateCampaignScreen() {
     campaignDate: '',
     clientId: '',
     driverProfileId: '',
-    routeCode: '',
+    routeId: '',
     internalNotes: '',
-    driverDailyWage: '',
-    transportCost: '',
-    otherCost: '',
+    clientBilledAmount: '',
   });
 
   function setField<K extends keyof FormState>(key: K, val: FormState[K]) {
@@ -194,6 +188,7 @@ export function CreateCampaignScreen() {
 
   const { data: clients = [], isLoading: loadingClients } = useQuery({ queryKey: ['admin-clients'], queryFn: fetchClients });
   const { data: drivers = [], isLoading: loadingDrivers } = useQuery({ queryKey: ['admin-drivers'], queryFn: fetchDrivers });
+  const { data: routes = [], isLoading: loadingRoutes } = useQuery({ queryKey: ['admin-routes'], queryFn: fetchRoutes });
 
   const mutation = useMutation({
     mutationFn: createCampaign,
@@ -217,11 +212,9 @@ export function CreateCampaignScreen() {
       campaign_date: form.campaignDate.trim(),
       client_id: form.clientId,
       driver_profile_id: form.driverProfileId || null,
-      route_code: form.routeCode.trim() || null,
+      route_id: form.routeId || null,
       internal_notes: form.internalNotes.trim() || null,
-      driver_daily_wage: form.driverDailyWage ? Number(form.driverDailyWage) : null,
-      transport_cost: form.transportCost ? Number(form.transportCost) : null,
-      other_cost: form.otherCost ? Number(form.otherCost) : null,
+      client_billed_amount: form.clientBilledAmount ? Number(form.clientBilledAmount) : null,
       created_by: profile?.id ?? '',
       status: 'draft',
     });
@@ -251,8 +244,10 @@ export function CreateCampaignScreen() {
           setField={setField}
           clients={clients}
           drivers={drivers}
+          routes={routes}
           loadingClients={loadingClients}
           loadingDrivers={loadingDrivers}
+          loadingRoutes={loadingRoutes}
         />
       </KeyboardAvoidingView>
     </View>

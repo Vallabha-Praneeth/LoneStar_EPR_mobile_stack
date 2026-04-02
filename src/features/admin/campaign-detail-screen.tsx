@@ -9,15 +9,15 @@ import { AdminHeader } from '@/components/admin-header';
 import { InfoCard } from '@/components/info-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
-import { Clipboard, DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
+import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
 
 function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
-  const totalCost
-    = (campaign.driver_daily_wage ?? 0)
-      + (campaign.transport_cost ?? 0)
-      + (campaign.other_cost ?? 0);
+  const totalCost = (campaign.campaign_costs ?? []).reduce(
+    (sum, c) => sum + (c.amount ?? 0),
+    0,
+  );
 
   return (
     <View className="mb-2 gap-4">
@@ -37,24 +37,26 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
         </View>
       </View>
 
-      {campaign.route_code && (
-        <InfoCard icon={<MapPin color="#737373" width={16} height={16} />} label="Route" value={campaign.route_code} />
+      {campaign.routes?.name && (
+        <InfoCard icon={<MapPin color="#737373" width={16} height={16} />} label="Route" value={campaign.routes.name} />
       )}
 
-      <View className="flex-row gap-3">
-        <View className="flex-1">
-          <InfoCard icon={<DollarSign color="#737373" width={16} height={16} />} label="Driver Wage" value={`$${campaign.driver_daily_wage ?? 0}`} />
-        </View>
-        <View className="flex-1">
-          <InfoCard icon={<Truck color="#737373" width={16} height={16} />} label="Transport" value={`$${campaign.transport_cost ?? 0}`} />
-        </View>
-      </View>
+      {(campaign.campaign_costs ?? []).map(cost => (
+        <InfoCard
+          key={cost.id}
+          icon={<DollarSign color="#737373" width={16} height={16} />}
+          label={cost.cost_types?.name ?? 'Cost'}
+          value={`$${cost.amount}`}
+        />
+      ))}
 
-      {(campaign.other_cost ?? 0) > 0 && (
-        <InfoCard icon={<Clipboard color="#737373" width={16} height={16} />} label="Other Cost" value={`$${campaign.other_cost}`} />
+      {totalCost > 0 && (
+        <InfoCard icon={<DollarSign color="#737373" width={16} height={16} />} label="Total Cost" value={`$${totalCost}`} />
       )}
 
-      <InfoCard icon={<DollarSign color="#737373" width={16} height={16} />} label="Total Cost" value={`$${totalCost}`} />
+      {campaign.client_billed_amount != null && campaign.client_billed_amount > 0 && (
+        <InfoCard icon={<DollarSign color="#737373" width={16} height={16} />} label="Client Billed" value={`$${campaign.client_billed_amount}`} />
+      )}
 
       {campaign.internal_notes && (
         <Card className="rounded-xl p-4">
