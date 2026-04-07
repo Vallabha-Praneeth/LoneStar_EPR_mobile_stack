@@ -22,7 +22,7 @@ export async function createCostType(name: string): Promise<void> {
     throw error;
 }
 
-export async function updateCostTypeActive(id: string, isActive: boolean): Promise<void> {
+export async function toggleCostTypeActive(id: string, isActive: boolean): Promise<void> {
   const { error } = await supabase
     .from('cost_types')
     .update({ is_active: !isActive })

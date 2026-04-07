@@ -3,7 +3,8 @@ import type { AnalyticsRange, AnalyticsSummary } from '@/lib/analytics';
 import { useQuery } from '@tanstack/react-query';
 
 import * as React from 'react';
-import { ActivityIndicator, ScrollView } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
@@ -39,14 +40,16 @@ function RangePicker({
   return (
     <View className="flex-row gap-1.5">
       {RANGES.map(r => (
-        <View
+        <Pressable
           key={r.value}
+          accessibilityRole="button"
+          accessibilityState={{ selected: r.value === value }}
           className={`rounded-lg px-3 py-1.5 ${
             r.value === value
               ? 'bg-primary'
               : 'bg-neutral-100 dark:bg-neutral-700'
           }`}
-          onTouchEnd={() => onChange(r.value)}
+          onPress={() => onChange(r.value)}
         >
           <Text
             className={`text-xs font-semibold ${
@@ -57,7 +60,7 @@ function RangePicker({
           >
             {r.label}
           </Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -164,6 +167,7 @@ function SectionCard({
 // ─── Main Screen ─────────────────────────────────────────────────
 
 export function AnalyticsScreen() {
+  const insets = useSafeAreaInsets();
   const [range, setRange] = React.useState<AnalyticsRange>('3m');
 
   const summaryQuery = useQuery({
@@ -182,6 +186,7 @@ export function AnalyticsScreen() {
   });
 
   const isLoading = summaryQuery.isLoading || clientsQuery.isLoading || driversQuery.isLoading;
+  const isError = summaryQuery.isError || clientsQuery.isError || driversQuery.isError;
 
   const clientBars: BarDatum[] = (clientsQuery.data ?? []).map(c => ({
     label: c.clientName,
@@ -198,7 +203,10 @@ export function AnalyticsScreen() {
   return (
     <View testID="analytics-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       {/* Header */}
-      <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
+      <View
+        className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pb-3 dark:border-neutral-700 dark:bg-neutral-800"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <AppLogo size="sm" showText />
         <RangePicker value={range} onChange={setRange} />
       </View>
@@ -209,39 +217,47 @@ export function AnalyticsScreen() {
               <ActivityIndicator size="large" />
             </View>
           )
-        : (
-            <ScrollView
-              contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* KPI Cards */}
-              {summaryQuery.data && <KpiGrid summary={summaryQuery.data} />}
+        : isError
+          ? (
+              <View className="flex-1 items-center justify-center px-6">
+                <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+                  Couldn't load analytics right now. Please try again.
+                </Text>
+              </View>
+            )
+          : (
+              <ScrollView
+                contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* KPI Cards */}
+                {summaryQuery.data && <KpiGrid summary={summaryQuery.data} />}
 
-              {/* Top Clients */}
-              {clientBars.length > 0 && (
-                <SectionCard title="Top Clients by Revenue">
-                  <HorizontalBarChart data={clientBars} barColor="#22c55e" />
-                </SectionCard>
-              )}
+                {/* Top Clients */}
+                {clientBars.length > 0 && (
+                  <SectionCard title="Top Clients by Revenue">
+                    <HorizontalBarChart data={clientBars} barColor="#22c55e" />
+                  </SectionCard>
+                )}
 
-              {/* Top Drivers */}
-              {driverBars.length > 0 && (
-                <SectionCard title="Top Drivers by Payout">
-                  <HorizontalBarChart data={driverBars} barColor="#3b82f6" />
-                </SectionCard>
-              )}
+                {/* Top Drivers */}
+                {driverBars.length > 0 && (
+                  <SectionCard title="Top Drivers by Payout">
+                    <HorizontalBarChart data={driverBars} barColor="#3b82f6" />
+                  </SectionCard>
+                )}
 
-              {/* Empty state */}
-              {summaryQuery.data && summaryQuery.data.totalCampaigns === 0 && (
-                <EmptyStateWithAnimation
-                  source={lottieAssets.adminEmptySearch}
-                  message="No campaign data for this period"
-                  testID="admin-analytics-empty-animation"
-                  {...emptyStatePresets.adminAnalytics}
-                />
-              )}
-            </ScrollView>
-          )}
+                {/* Empty state */}
+                {summaryQuery.data && summaryQuery.data.totalCampaigns === 0 && (
+                  <EmptyStateWithAnimation
+                    source={lottieAssets.adminEmptySearch}
+                    message="No campaign data for this period"
+                    testID="admin-analytics-empty-animation"
+                    {...emptyStatePresets.adminAnalytics}
+                  />
+                )}
+              </ScrollView>
+            )}
     </View>
   );
 }

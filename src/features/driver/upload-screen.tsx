@@ -145,7 +145,12 @@ export function UploadScreen() {
         .invoke('send-whatsapp-photo', {
           body: { campaignId: campaign!.id, photoId },
         })
-        .catch(() => {});
+        .catch(() => {
+          showMessage({
+            message: 'Photo uploaded, but WhatsApp notification failed.',
+            type: 'warning',
+          });
+        });
       router.replace('/(app)/upload-success');
     },
     onError: (err: Error) =>

@@ -80,7 +80,7 @@ export async function upsertDriverRecord(
       throw error;
     return;
   }
-  const { error } = await supabase.from('drivers').update(fields).eq('id', existingId);
+  const { error } = await supabase.from('drivers').update(fields).eq('id', existingId).eq('profile_id', profileId);
   if (error)
     throw error;
 }

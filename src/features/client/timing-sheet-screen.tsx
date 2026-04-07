@@ -128,7 +128,7 @@ export function TimingSheetScreen() {
             <TimingShiftCard
               key={row.shiftId}
               title={row.campaign.title}
-              dateLabel={format(new Date(row.campaign.campaign_date), 'MMMM d, yyyy')}
+              dateLabel={format(new Date(`${row.campaign.campaign_date}T12:00:00`), 'MMMM d, yyyy')}
               startLabel={row.started_at ? format(new Date(row.started_at), 'h:mm a') : '—'}
               endLabel={row.ended_at ? format(new Date(row.ended_at), 'h:mm a') : '—'}
               firstPhotoLabel={

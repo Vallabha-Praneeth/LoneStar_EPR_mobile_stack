@@ -313,6 +313,14 @@ export function RouteFormScreen() {
     );
   }
 
+  if (isEdit && routeQuery.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+        <Text className="text-sm text-red-600 dark:text-red-400">Failed to load route.</Text>
+      </View>
+    );
+  }
+
   const r = routeQuery.data;
   const formKey = isEdit ? `${routeId}-${routeQuery.dataUpdatedAt}` : 'create';
 

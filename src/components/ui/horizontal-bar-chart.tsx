@@ -31,7 +31,7 @@ export function HorizontalBarChart({
       {data.map((item, i) => {
         const pct = Math.max((item.value / maxValue) * 100, 2);
         return (
-          <View key={item.label} style={{ marginBottom: i < data.length - 1 ? BAR_GAP : 0 }}>
+          <View key={`${item.label}-${i}`} style={{ marginBottom: i < data.length - 1 ? BAR_GAP : 0 }}>
             <View className="mb-1 flex-row items-center justify-between">
               <Text className="text-xs font-medium text-neutral-600 dark:text-neutral-400" numberOfLines={1}>
                 {item.label}

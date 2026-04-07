@@ -48,7 +48,7 @@ function computeShiftTotals(shifts: DriverShiftHistoryRow[]): { totalMins: numbe
 function ShiftHistoryCard({ row }: { row: DriverShiftHistoryRow }) {
   const c = row.campaigns;
   const title = c?.title ?? 'Campaign';
-  const dateStr = c?.campaign_date ? format(new Date(c.campaign_date), 'MMM d, yyyy') : '';
+  const dateStr = c?.campaign_date ? format(new Date(`${c.campaign_date}T12:00:00`), 'MMM d, yyyy') : '';
   const hours
     = row.ended_at ? formatDurationMins(shiftDurationMins(row.started_at, row.ended_at)) : 'In progress';
   const wage = c?.driver_daily_wage != null ? `$${Number(c.driver_daily_wage).toFixed(2)}` : '—';

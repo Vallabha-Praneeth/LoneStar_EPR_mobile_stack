@@ -5,6 +5,8 @@ import type {
   DriverBreakdownRow,
 } from './types';
 
+import { format, subMonths, subYears } from 'date-fns';
+
 /**
  * Analytics Supabase queries for mobile.
  * Mirrors web analytics query layer — same DB, same calculations.
@@ -29,16 +31,27 @@ type RawCampaignRow = {
 
 function getDateRange(range: AnalyticsRange): { from: string; to: string } {
   const to = new Date();
-  const from = new Date();
-  const months = range === '3m' ? 3 : range === '6m' ? 6 : 12;
-  from.setMonth(from.getMonth() - months);
+  const from = range === '1y'
+    ? subYears(to, 1)
+    : subMonths(to, range === '3m' ? 3 : 6);
   return {
-    from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10),
+    from: format(from, 'yyyy-MM-dd'),
+    to: format(to, 'yyyy-MM-dd'),
   };
 }
 
-async function fetchCampaigns(range: AnalyticsRange): Promise<RawCampaignRow[]> {
+const fetchCache = new Map<AnalyticsRange, Promise<RawCampaignRow[]>>();
+
+function getCampaigns(range: AnalyticsRange): Promise<RawCampaignRow[]> {
+  const cached = fetchCache.get(range);
+  if (cached)
+    return cached;
+  const promise = fetchCampaignsRaw(range).finally(() => fetchCache.delete(range));
+  fetchCache.set(range, promise);
+  return promise;
+}
+
+async function fetchCampaignsRaw(range: AnalyticsRange): Promise<RawCampaignRow[]> {
   const { from, to } = getDateRange(range);
 
   const { data, error } = await supabase
@@ -61,7 +74,7 @@ async function fetchCampaigns(range: AnalyticsRange): Promise<RawCampaignRow[]> 
 }
 
 export async function getSummary(range: AnalyticsRange): Promise<AnalyticsSummary> {
-  const rows = await fetchCampaigns(range);
+  const rows = await getCampaigns(range);
 
   let revenue = 0;
   let driverCost = 0;
@@ -106,7 +119,7 @@ export async function getSummary(range: AnalyticsRange): Promise<AnalyticsSummar
 }
 
 export async function getClientBreakdown(range: AnalyticsRange): Promise<ClientBreakdownRow[]> {
-  const rows = await fetchCampaigns(range);
+  const rows = await getCampaigns(range);
   const map = new Map<string, { clientName: string; revenue: number; campaignCount: number }>();
 
   for (const row of rows) {
@@ -133,7 +146,7 @@ export async function getClientBreakdown(range: AnalyticsRange): Promise<ClientB
 }
 
 export async function getDriverBreakdown(range: AnalyticsRange): Promise<DriverBreakdownRow[]> {
-  const rows = await fetchCampaigns(range);
+  const rows = await getCampaigns(range);
   const map = new Map<string, { driverName: string; hours: number; payout: number; campaignCount: number }>();
 
   for (const row of rows) {

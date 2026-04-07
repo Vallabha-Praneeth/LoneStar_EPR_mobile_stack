@@ -42,13 +42,16 @@ export async function fetchClientTimingShifts(clientId: string): Promise<ClientT
     if (shiftErr)
       throw shiftErr;
 
-    const { data: firstPhoto } = await supabase
+    const { data: firstPhoto, error: photoError } = await supabase
       .from('campaign_photos')
       .select('submitted_at')
       .eq('campaign_id', c.id)
       .order('submitted_at', { ascending: true })
       .limit(1)
       .maybeSingle();
+
+    if (photoError)
+      console.warn('Failed to fetch first photo for campaign', c.id, photoError.message);
 
     const firstAt = firstPhoto?.submitted_at ?? null;
 

@@ -6,10 +6,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   TextInput,
   TouchableOpacity,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminHeader } from '@/components/admin-header';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
@@ -19,7 +22,7 @@ import {
   createCostType,
   deleteCostType,
   fetchCostTypes,
-  updateCostTypeActive,
+  toggleCostTypeActive,
   updateCostTypeName,
 } from '@/lib/api/admin/cost-types';
 
@@ -176,11 +179,12 @@ function CostTypesList({
   onToggle,
   onDelete,
 }: ListProps) {
+  const insets = useSafeAreaInsets();
   return (
     <FlatList
       data={costTypes}
       keyExtractor={item => item.id}
-      contentContainerStyle={{ paddingBottom: 32 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
       ListEmptyComponent={(
         <EmptyStateWithAnimation
           source={lottieAssets.adminEmptySearch}
@@ -207,6 +211,51 @@ function CostTypesList({
   );
 }
 
+function useCostTypeMutations(
+  queryClient: ReturnType<typeof useQueryClient>,
+  setNewName: (v: string) => void,
+  setEditingId: (v: string | null) => void,
+) {
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-cost-types'] });
+  const onError = (err: Error) => showMessage({ message: err.message, type: 'danger' });
+
+  const createMutation = useMutation({
+    mutationFn: createCostType,
+    onSuccess: () => {
+      invalidate();
+      setNewName('');
+      showMessage({ message: 'Cost type created', type: 'success' });
+    },
+    onError,
+  });
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) => toggleCostTypeActive(id, is_active),
+    onSuccess: () => {
+      invalidate();
+      showMessage({ message: 'Cost type updated', type: 'success' });
+    },
+    onError,
+  });
+  const renameMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => updateCostTypeName(id, name),
+    onSuccess: () => {
+      invalidate();
+      setEditingId(null);
+      showMessage({ message: 'Name saved', type: 'success' });
+    },
+    onError,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: deleteCostType,
+    onSuccess: () => {
+      invalidate();
+      showMessage({ message: 'Cost type deleted', type: 'success' });
+    },
+    onError,
+  });
+  return { createMutation, toggleMutation, renameMutation, deleteMutation };
+}
+
 export function CostTypesScreen() {
   const queryClient = useQueryClient();
   const [newName, setNewName] = React.useState('');
@@ -218,44 +267,7 @@ export function CostTypesScreen() {
     queryFn: fetchCostTypes,
   });
 
-  const createMutation = useMutation({
-    mutationFn: createCostType,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-cost-types'] });
-      setNewName('');
-      showMessage({ message: 'Cost type created', type: 'success' });
-    },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
-      updateCostTypeActive(id, is_active),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-cost-types'] });
-      showMessage({ message: 'Cost type updated', type: 'success' });
-    },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
-  });
-
-  const renameMutation = useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => updateCostTypeName(id, name),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-cost-types'] });
-      setEditingId(null);
-      showMessage({ message: 'Name saved', type: 'success' });
-    },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteCostType,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-cost-types'] });
-      showMessage({ message: 'Cost type deleted', type: 'success' });
-    },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
-  });
+  const { createMutation, toggleMutation, renameMutation, deleteMutation } = useCostTypeMutations(queryClient, setNewName, setEditingId);
 
   function confirmDelete(id: string, name: string) {
     Alert.alert('Delete cost type', `Remove "${name}"? Linked campaign costs may block this.`, [
@@ -277,7 +289,10 @@ export function CostTypesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+    <KeyboardAvoidingView
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <AdminHeader title="Cost types" />
       <CostTypesCreateBar
         newName={newName}
@@ -312,6 +327,6 @@ export function CostTypesScreen() {
           onDelete={confirmDelete}
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

@@ -50,7 +50,7 @@ function CampaignCard({ item, onPress }: { item: CampaignRow; onPress: () => voi
           <View className="flex-row items-center gap-1">
             <Clock color="#a3a3a3" width={12} height={12} />
             <Text className="text-xs text-neutral-500">
-              {format(new Date(item.campaign_date), 'MMM d, yyyy')}
+              {format(new Date(`${item.campaign_date}T12:00:00`), 'MMM d, yyyy')}
             </Text>
           </View>
         </View>
