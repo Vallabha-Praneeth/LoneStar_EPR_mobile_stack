@@ -1,11 +1,12 @@
 import type { CampaignDetail } from '@/lib/api/admin/campaigns';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import { ActivityIndicator, FlatList, Image } from 'react-native';
+import { ActivityIndicator, FlatList, Image, TouchableOpacity } from 'react-native';
 
 import { AdminHeader } from '@/components/admin-header';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { InfoCard } from '@/components/info-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
@@ -14,6 +15,7 @@ import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
 
 function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
+  const router = useRouter();
   const totalCost
     = (campaign.driver_daily_wage ?? 0)
       + (campaign.transport_cost ?? 0)
@@ -33,7 +35,30 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
           <InfoCard icon={<User color="#737373" width={16} height={16} />} label="Client" value={campaign.clients?.name ?? 'No client'} />
         </View>
         <View className="flex-1">
-          <InfoCard icon={<Truck color="#737373" width={16} height={16} />} label="Driver" value={campaign.driver_profile?.display_name ?? 'Unassigned'} />
+          {campaign.driver_profile_id
+            ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push(
+                      `/(app)/admin/driver-detail?profileId=${campaign.driver_profile_id}` as const,
+                    )}
+                  accessibilityLabel="Open driver details"
+                >
+                  <InfoCard
+                    icon={<Truck color="#737373" width={16} height={16} />}
+                    label="Driver"
+                    value={campaign.driver_profile?.display_name ?? 'Unassigned'}
+                  />
+                </TouchableOpacity>
+              )
+            : (
+                <InfoCard
+                  icon={<Truck color="#737373" width={16} height={16} />}
+                  label="Driver"
+                  value={campaign.driver_profile?.display_name ?? 'Unassigned'}
+                />
+              )}
         </View>
       </View>
 
@@ -144,7 +169,7 @@ export function CampaignDetailScreen() {
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-      <AdminHeader title={campaign.title} />
+      <AdminHeader title={campaign.title} right={<AdminSettingsGearButton />} />
       <FlatList
         data={campaign.campaign_photos}
         keyExtractor={item => item.id}

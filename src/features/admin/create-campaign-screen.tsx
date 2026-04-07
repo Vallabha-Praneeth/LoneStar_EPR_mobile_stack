@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { AdminHeader } from '@/components/admin-header';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { Text, View } from '@/components/ui';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { createCampaign } from '@/lib/api/admin/campaigns';
@@ -233,16 +234,19 @@ export function CreateCampaignScreen() {
         title="Create Campaign"
         showBack={false}
         right={(
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={mutation.isPending}
-            activeOpacity={0.7}
-            className="rounded-lg bg-primary px-4 py-1.5 disabled:opacity-50"
-          >
-            {mutation.isPending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text className="text-sm font-semibold text-white">Save</Text>}
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            <AdminSettingsGearButton />
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={mutation.isPending}
+              activeOpacity={0.7}
+              className="rounded-lg bg-primary px-4 py-1.5 disabled:opacity-50"
+            >
+              {mutation.isPending
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text className="text-sm font-semibold text-white">Save</Text>}
+            </TouchableOpacity>
+          </View>
         )}
       />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">

@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import * as React from 'react';
 
 import { ActivityIndicator, FlatList } from 'react-native';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
@@ -89,6 +90,7 @@ export function ReportsScreen() {
     <View testID="reports-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
+        <AdminSettingsGearButton />
       </View>
 
       <View className="px-4 pt-3">

@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import * as React from 'react';
 import { Platform } from 'react-native';
 
-import { BarChart, Clipboard, Plus, Users } from '@/components/ui/icons';
+import { BarChart, Clipboard, MapPin, Plus, Users } from '@/components/ui/icons';
 
 const ACTIVE = '#1d4ed8';
 const INACTIVE = '#a3a3a3';
@@ -60,6 +60,18 @@ export default function AdminTabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="routes"
+        options={{
+          title: 'Routes',
+          tabBarIcon: ({ focused }) => (
+            <MapPin color={focused ? ACTIVE : INACTIVE} width={20} height={20} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="cost-types" options={{ href: null }} />
+      <Tabs.Screen name="route-form" options={{ href: null }} />
+      <Tabs.Screen name="driver-detail" options={{ href: null }} />
     </Tabs>
   );
 }

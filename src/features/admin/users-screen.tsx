@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { SearchBar } from '@/components/search-bar';
 import { Text, View } from '@/components/ui';
 import { Modal, useModal } from '@/components/ui/modal';
@@ -374,6 +375,7 @@ function UsersHeader({ onAddClient, onAddDriver }: { onAddClient: () => void; on
         <Text className="text-base font-semibold">Users</Text>
       </View>
       <View className="flex-row items-center gap-2">
+        <AdminSettingsGearButton />
         <TouchableOpacity onPress={onAddClient}>
           <View className="rounded-lg border border-primary px-3 py-1.5">
             <Text className="text-xs font-semibold text-primary">+ Client</Text>

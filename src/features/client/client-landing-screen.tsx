@@ -1,26 +1,38 @@
+import { useRouter } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
 import { Text, View } from '@/components/ui';
-import { Camera, LogOut } from '@/components/ui/icons';
+import { Camera, Clock, LogOut } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 
 export function ClientLandingScreen() {
+  const router = useRouter();
   const signOut = useAuthStore.use.signOut();
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
-        <TouchableOpacity
-          onPress={signOut}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-        >
-          <LogOut color="#737373" width={18} height={18} />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-1">
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/client/timing')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="mr-1 size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+            accessibilityLabel="Timing sheet"
+          >
+            <Clock color="#737373" width={18} height={18} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={signOut}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+          >
+            <LogOut color="#737373" width={18} height={18} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View className="flex-1 items-center justify-center p-6">

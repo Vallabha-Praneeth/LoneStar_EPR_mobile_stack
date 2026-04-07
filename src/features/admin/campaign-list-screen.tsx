@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 
 import { ActivityIndicator, FlatList, TouchableOpacity } from 'react-native';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
@@ -84,15 +85,18 @@ export function CampaignListScreen() {
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
-        <TouchableOpacity
-          testID="sign-out-button"
-          accessibilityLabel="Sign out"
-          onPress={signOut}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-        >
-          <LogOut color="#737373" width={18} height={18} />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-1">
+          <AdminSettingsGearButton />
+          <TouchableOpacity
+            testID="sign-out-button"
+            accessibilityLabel="Sign out"
+            onPress={signOut}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+          >
+            <LogOut color="#737373" width={18} height={18} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View className="px-4 pt-3">
