@@ -45,7 +45,7 @@ export default function AdminTabLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          title: 'Reports',
+          title: 'Analytics',
           tabBarIcon: ({ focused }) => (
             <BarChart color={focused ? ACTIVE : INACTIVE} width={20} height={20} />
           ),
