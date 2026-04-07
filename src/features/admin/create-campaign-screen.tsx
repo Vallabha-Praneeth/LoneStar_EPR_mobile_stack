@@ -1,3 +1,4 @@
+import type { AdminRouteRow } from '@/lib/api/admin/routes';
 import type { ClientOption, DriverOption } from '@/lib/api/admin/selectors';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { Text, View } from '@/components/ui';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { createCampaign } from '@/lib/api/admin/campaigns';
+import { fetchAdminRoutes } from '@/lib/api/admin/routes';
 import { fetchClients, fetchDrivers } from '@/lib/api/admin/selectors';
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -65,16 +67,19 @@ function SelectorList<T extends { id: string }>({
   selectedId,
   onSelect,
   labelKey,
+  labelFormatter,
 }: {
   items: T[];
   selectedId: string;
   onSelect: (id: string) => void;
   labelKey: keyof T;
+  labelFormatter?: (item: T) => string;
 }) {
   return (
     <View className="flex-row flex-wrap gap-2">
       {items.map((item) => {
         const isSelected = item.id === selectedId;
+        const label = labelFormatter ? labelFormatter(item) : String(item[labelKey]);
         return (
           <TouchableOpacity
             key={item.id}
@@ -88,7 +93,7 @@ function SelectorList<T extends { id: string }>({
             <Text
               className={`text-sm ${isSelected ? 'font-medium text-primary' : 'text-neutral-700 dark:text-neutral-300'}`}
             >
-              {String(item[labelKey])}
+              {label}
             </Text>
           </TouchableOpacity>
         );
@@ -105,11 +110,9 @@ type FormState = {
   campaignDate: string;
   clientId: string;
   driverProfileId: string;
-  routeCode: string;
+  routeId: string;
+  clientBilledAmount: string;
   internalNotes: string;
-  driverDailyWage: string;
-  transportCost: string;
-  otherCost: string;
 };
 
 function CampaignFormBody({
@@ -117,16 +120,21 @@ function CampaignFormBody({
   setField,
   clients,
   drivers,
+  routes,
   loadingClients,
   loadingDrivers,
+  loadingRoutes,
 }: {
   form: FormState;
   setField: <K extends keyof FormState>(key: K, val: FormState[K]) => void;
   clients: ClientOption[];
   drivers: DriverOption[];
+  routes: AdminRouteRow[];
   loadingClients: boolean;
   loadingDrivers: boolean;
+  loadingRoutes: boolean;
 }) {
+  const activeRoutes = routes.filter(r => r.is_active);
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
       <FormField label="Title *">
@@ -149,20 +157,22 @@ function CampaignFormBody({
           : <SelectorList items={drivers} selectedId={form.driverProfileId} onSelect={v => setField('driverProfileId', v)} labelKey="display_name" />}
       </FormField>
 
-      <FormField label="Route Code">
-        <FormInput value={form.routeCode} onChangeText={v => setField('routeCode', v)} placeholder="e.g. RT-101" />
+      <FormField label="Route">
+        {loadingRoutes
+          ? <ActivityIndicator size="small" />
+          : (
+              <SelectorList
+                items={activeRoutes}
+                selectedId={form.routeId}
+                onSelect={v => setField('routeId', v)}
+                labelKey="name"
+                labelFormatter={r => r.city ? `${r.name} (${r.city})` : r.name}
+              />
+            )}
       </FormField>
 
-      <FormField label="Driver Daily Wage">
-        <FormInput value={form.driverDailyWage} onChangeText={v => setField('driverDailyWage', v)} placeholder="0" keyboardType="numeric" />
-      </FormField>
-
-      <FormField label="Transport Cost">
-        <FormInput value={form.transportCost} onChangeText={v => setField('transportCost', v)} placeholder="0" keyboardType="numeric" />
-      </FormField>
-
-      <FormField label="Other Cost">
-        <FormInput value={form.otherCost} onChangeText={v => setField('otherCost', v)} placeholder="0" keyboardType="numeric" />
+      <FormField label="Client Billed Amount">
+        <FormInput value={form.clientBilledAmount} onChangeText={v => setField('clientBilledAmount', v)} placeholder="0.00" keyboardType="numeric" />
       </FormField>
 
       <FormField label="Internal Notes">
@@ -182,11 +192,9 @@ export function CreateCampaignScreen() {
     campaignDate: '',
     clientId: '',
     driverProfileId: '',
-    routeCode: '',
+    routeId: '',
+    clientBilledAmount: '',
     internalNotes: '',
-    driverDailyWage: '',
-    transportCost: '',
-    otherCost: '',
   });
 
   function setField<K extends keyof FormState>(key: K, val: FormState[K]) {
@@ -195,6 +203,7 @@ export function CreateCampaignScreen() {
 
   const { data: clients = [], isLoading: loadingClients } = useQuery({ queryKey: ['admin-clients'], queryFn: fetchClients });
   const { data: drivers = [], isLoading: loadingDrivers } = useQuery({ queryKey: ['admin-drivers'], queryFn: fetchDrivers });
+  const { data: routes = [], isLoading: loadingRoutes } = useQuery({ queryKey: ['admin-routes'], queryFn: fetchAdminRoutes });
 
   const mutation = useMutation({
     mutationFn: createCampaign,
@@ -213,16 +222,16 @@ export function CreateCampaignScreen() {
     if (!form.clientId)
       return Alert.alert('Validation', 'Please select a client');
 
+    const billedNum = Number.parseFloat(form.clientBilledAmount);
+
     mutation.mutate({
       title: form.title.trim(),
       campaign_date: form.campaignDate.trim(),
       client_id: form.clientId,
       driver_profile_id: form.driverProfileId || null,
-      route_code: form.routeCode.trim() || null,
+      route_id: form.routeId || null,
       internal_notes: form.internalNotes.trim() || null,
-      driver_daily_wage: form.driverDailyWage ? Number(form.driverDailyWage) : null,
-      transport_cost: form.transportCost ? Number(form.transportCost) : null,
-      other_cost: form.otherCost ? Number(form.otherCost) : null,
+      client_billed_amount: !Number.isNaN(billedNum) && billedNum > 0 ? billedNum : null,
       created_by: profile?.id ?? '',
       status: 'draft',
     });
@@ -255,8 +264,10 @@ export function CreateCampaignScreen() {
           setField={setField}
           clients={clients}
           drivers={drivers}
+          routes={routes}
           loadingClients={loadingClients}
           loadingDrivers={loadingDrivers}
+          loadingRoutes={loadingRoutes}
         />
       </KeyboardAvoidingView>
     </View>
