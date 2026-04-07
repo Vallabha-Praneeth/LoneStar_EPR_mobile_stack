@@ -1,8 +1,10 @@
 import { TouchableOpacity } from 'react-native';
 
 import { AppLogo } from '@/components/app-logo';
+import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
+import { emptyStatePresets, lottieAssets } from '@/components/motion';
 import { Text, View } from '@/components/ui';
-import { Camera, FileText, LogOut } from '@/components/ui/icons';
+import { Camera, LogOut } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 
 export function ClientLandingScreen() {
@@ -23,15 +25,13 @@ export function ClientLandingScreen() {
 
       <View className="flex-1 items-center justify-center p-6">
         <View className="w-full items-center gap-5 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
-          <View className="size-14 items-center justify-center rounded-2xl bg-primary/10">
-            <FileText color="#1d4ed8" width={28} height={28} />
-          </View>
-          <View className="items-center gap-1">
-            <Text className="text-lg font-semibold">Campaign Reports</Text>
-            <Text className="text-center text-sm/5 text-neutral-500">
-              View your campaign photos, timing sheets, and PDF reports on the web portal.
-            </Text>
-          </View>
+          <Text className="text-lg font-semibold">Campaign Reports</Text>
+          <EmptyStateWithAnimation
+            source={lottieAssets.clientEmptyBox}
+            message="View your campaign photos, timing sheets, and PDF reports on the web portal."
+            testID="client-reports-info-animation"
+            {...emptyStatePresets.clientReportsInfo}
+          />
           <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-4 py-2.5 dark:bg-green-900/20">
             <Camera color="#16a34a" width={14} height={14} />
             <Text className="text-xs font-medium text-green-700 dark:text-green-400">

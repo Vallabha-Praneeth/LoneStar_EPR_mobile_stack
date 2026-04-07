@@ -5,6 +5,8 @@ import * as React from 'react';
 
 import { ActivityIndicator, FlatList } from 'react-native';
 import { AppLogo } from '@/components/app-logo';
+import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
+import { emptyStatePresets, lottieAssets } from '@/components/motion';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
@@ -130,9 +132,12 @@ export function ReportsScreen() {
               renderItem={({ item }) => <ReportCampaignCard item={item} />}
               contentContainerStyle={{ padding: 16, gap: 12 }}
               ListEmptyComponent={(
-                <View className="items-center py-16">
-                  <Text className="text-sm text-neutral-500">No campaigns found</Text>
-                </View>
+                <EmptyStateWithAnimation
+                  source={lottieAssets.adminEmptySearch}
+                  message="No campaigns found"
+                  testID="admin-reports-empty-animation"
+                  {...emptyStatePresets.adminReports}
+                />
               )}
             />
           )}

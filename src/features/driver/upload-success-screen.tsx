@@ -1,9 +1,12 @@
 import { useRouter } from 'expo-router';
+import { MotiView } from 'moti';
 import * as React from 'react';
 import { TouchableOpacity } from 'react-native';
 
+import { lottieAssets, UploadSuccessAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
-import { Camera, CheckCircle, ChevronLeft } from '@/components/ui/icons';
+import { Camera, ChevronLeft } from '@/components/ui/icons';
+import { motionTokens } from '@/lib/motion/tokens';
 
 export function UploadSuccessScreen() {
   const router = useRouter();
@@ -11,18 +14,22 @@ export function UploadSuccessScreen() {
   return (
     <View className="flex-1 items-center justify-center bg-neutral-50 p-6 dark:bg-neutral-900">
       <View className="w-full items-center gap-5 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
-        <View className="size-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-          <CheckCircle color="#16a34a" width={40} height={40} />
-        </View>
+        <UploadSuccessAnimation
+          source={lottieAssets.uploadSuccess}
+        />
 
-        <View className="items-center gap-1">
+        <MotiView
+          from={{ opacity: 0, translateY: 6 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: motionTokens.duration.reveal }}
+          className="items-center gap-1"
+        >
           <Text className="text-center text-xl font-bold">Photo Submitted!</Text>
           <Text className="text-center text-sm/5 text-neutral-500">
             Your photo has been submitted successfully and is now visible to the
             client.
           </Text>
-        </View>
-
+        </MotiView>
         <View className="mt-1 w-full gap-3">
           <TouchableOpacity
             onPress={() => router.replace('/(app)/upload')}

@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Device from 'expo-device';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { MotiView } from 'moti';
 import * as React from 'react';
 import {
-  ActivityIndicator,
   Image,
   Platform,
   ScrollView,
@@ -12,12 +12,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
-
+import { lottieAssets, UploadProgressAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, ChevronLeft, ImageIcon, Upload } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchDriverCampaign } from '@/lib/api/driver/campaign';
 import { uploadPhoto } from '@/lib/api/driver/photos';
+import { motionTokens } from '@/lib/motion/tokens';
 import { supabase } from '@/lib/supabase';
 
 // iOS simulator has no camera — fall back to gallery
@@ -26,9 +27,19 @@ const IS_IOS_SIMULATOR = Platform.OS === 'ios' && !Device.isDevice;
 function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGallery: () => void }) {
   return (
     <View className="items-center gap-4 rounded-xl border-2 border-dashed border-neutral-200 p-8 dark:border-neutral-600">
-      <View className="size-16 items-center justify-center rounded-2xl bg-primary/10">
+      <MotiView
+        from={{ scale: 1 }}
+        animate={{ scale: 1.06 }}
+        transition={{
+          type: 'timing',
+          duration: motionTokens.duration.reveal,
+          loop: true,
+          repeatReverse: true,
+        }}
+        className="size-16 items-center justify-center rounded-2xl bg-primary/10"
+      >
         <Camera color="#1d4ed8" width={32} height={32} />
-      </View>
+      </MotiView>
       <Text className="text-center text-sm text-neutral-500">
         Take a photo or choose from gallery
       </Text>
@@ -80,36 +91,8 @@ function PhotoPreview({ uri, onClear }: { uri: string; onClear: () => void }) {
   );
 }
 
-export function UploadScreen() {
-  const router = useRouter();
-  const profile = useAuthStore.use.profile();
-  const queryClient = useQueryClient();
-
-  const [note, setNote] = React.useState('');
+function useImagePicker() {
   const [imageUri, setImageUri] = React.useState<string | null>(null);
-
-  const { data: campaign } = useQuery({
-    queryKey: ['driver-campaign', profile?.id],
-    queryFn: () => fetchDriverCampaign(profile!.id),
-    enabled: !!profile?.id,
-  });
-
-  const uploadMutation = useMutation({
-    mutationFn: () =>
-      uploadPhoto({ imageUri: imageUri!, campaignId: campaign!.id, driverId: profile!.id, note }),
-    onSuccess: (photoId: string) => {
-      queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
-      // Fire-and-forget WhatsApp notification to client
-      supabase.functions
-        .invoke('send-whatsapp-photo', {
-          body: { campaignId: campaign!.id, photoId },
-        })
-        .catch(() => {}); // silent — don't block the driver flow
-      router.replace('/(app)/upload-success');
-    },
-    onError: (err: Error) =>
-      showMessage({ message: err.message, type: 'danger' }),
-  });
 
   async function handleCamera() {
     if (IS_IOS_SIMULATOR) {
@@ -122,9 +105,8 @@ export function UploadScreen() {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 });
-    if (!result.canceled) {
+    if (!result.canceled)
       setImageUri(result.assets[0].uri);
-    }
   }
 
   async function handleGallery() {
@@ -134,10 +116,41 @@ export function UploadScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
-    if (!result.canceled) {
+    if (!result.canceled)
       setImageUri(result.assets[0].uri);
-    }
   }
+
+  return { imageUri, setImageUri, handleCamera, handleGallery };
+}
+
+export function UploadScreen() {
+  const router = useRouter();
+  const profile = useAuthStore.use.profile();
+  const queryClient = useQueryClient();
+  const [note, setNote] = React.useState('');
+  const { imageUri, setImageUri, handleCamera, handleGallery } = useImagePicker();
+
+  const { data: campaign } = useQuery({
+    queryKey: ['driver-campaign', profile?.id],
+    queryFn: () => fetchDriverCampaign(profile!.id),
+    enabled: !!profile?.id,
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: () =>
+      uploadPhoto({ imageUri: imageUri!, campaignId: campaign!.id, driverId: profile!.id, note }),
+    onSuccess: (photoId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
+      supabase.functions
+        .invoke('send-whatsapp-photo', {
+          body: { campaignId: campaign!.id, photoId },
+        })
+        .catch(() => {});
+      router.replace('/(app)/upload-success');
+    },
+    onError: (err: Error) =>
+      showMessage({ message: err.message, type: 'danger' }),
+  });
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
@@ -177,7 +190,12 @@ export function UploadScreen() {
             className="h-14 items-center justify-center rounded-xl bg-primary disabled:opacity-50"
           >
             {uploadMutation.isPending
-              ? <ActivityIndicator color="white" />
+              ? (
+                  <UploadProgressAnimation
+                    size={18}
+                    source={lottieAssets.uploadProgress}
+                  />
+                )
               : (
                   <View className="flex-row items-center gap-2">
                     <Upload color="#fff" width={18} height={18} />
