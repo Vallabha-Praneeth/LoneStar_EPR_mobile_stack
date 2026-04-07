@@ -4,7 +4,10 @@ import { format } from 'date-fns';
 import * as React from 'react';
 
 import { ActivityIndicator, FlatList } from 'react-native';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { AppLogo } from '@/components/app-logo';
+import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
+import { emptyStatePresets, lottieAssets } from '@/components/motion';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
@@ -87,6 +90,7 @@ export function ReportsScreen() {
     <View testID="reports-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
+        <AdminSettingsGearButton />
       </View>
 
       <View className="px-4 pt-3">
@@ -130,9 +134,12 @@ export function ReportsScreen() {
               renderItem={({ item }) => <ReportCampaignCard item={item} />}
               contentContainerStyle={{ padding: 16, gap: 12 }}
               ListEmptyComponent={(
-                <View className="items-center py-16">
-                  <Text className="text-sm text-neutral-500">No campaigns found</Text>
-                </View>
+                <EmptyStateWithAnimation
+                  source={lottieAssets.adminEmptySearch}
+                  message="No campaigns found"
+                  testID="admin-reports-empty-animation"
+                  {...emptyStatePresets.adminReports}
+                />
               )}
             />
           )}

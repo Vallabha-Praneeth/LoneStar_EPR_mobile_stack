@@ -1,3 +1,3 @@
-import { ReportsScreen } from '@/features/admin/reports-screen';
+import { AnalyticsScreen } from '@/features/admin/analytics-screen';
 
-export default ReportsScreen;
+export default AnalyticsScreen;

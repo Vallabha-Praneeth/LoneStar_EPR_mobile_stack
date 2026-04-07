@@ -5,7 +5,10 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 
 import { ActivityIndicator, FlatList, TouchableOpacity } from 'react-native';
+import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { AppLogo } from '@/components/app-logo';
+import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
+import { emptyStatePresets, lottieAssets } from '@/components/motion';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
@@ -19,6 +22,45 @@ const STATUS_ACCENT: Record<string, string> = {
   pending: 'bg-amber-500',
   draft: 'bg-neutral-300',
 };
+
+function CampaignCard({ item, onPress }: { item: CampaignRow; onPress: () => void }) {
+  const accentColor = STATUS_ACCENT[item.status] ?? STATUS_ACCENT.draft;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      className="flex-row overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+    >
+      <View className={`w-1 ${accentColor}`} />
+      <View className="flex-1 p-4">
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className="flex-1 text-[15px] font-semibold" numberOfLines={1}>{item.title}</Text>
+          <StatusBadge status={item.status} />
+        </View>
+        <View className="flex-row flex-wrap items-center gap-3">
+          <View className="flex-row items-center gap-1">
+            <User color="#a3a3a3" width={12} height={12} />
+            <Text className="text-xs text-neutral-500">{item.clients?.name ?? 'No client'}</Text>
+          </View>
+          <View className="flex-row items-center gap-1">
+            <Truck color="#a3a3a3" width={12} height={12} />
+            <Text className="text-xs text-neutral-500">{item.driver_profile?.display_name ?? 'Unassigned'}</Text>
+          </View>
+          <View className="flex-row items-center gap-1">
+            <Clock color="#a3a3a3" width={12} height={12} />
+            <Text className="text-xs text-neutral-500">
+              {format(new Date(`${item.campaign_date}T12:00:00`), 'MMM d, yyyy')}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View className="items-center justify-center pr-3">
+        <ArrowRight color="#d4d4d4" width={16} height={16} />
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export function CampaignListScreen() {
   const router = useRouter();
@@ -39,58 +81,22 @@ export function CampaignListScreen() {
     );
   });
 
-  function renderItem({ item }: { item: CampaignRow }) {
-    const accentColor = STATUS_ACCENT[item.status] ?? STATUS_ACCENT.draft;
-
-    return (
-      <TouchableOpacity
-        onPress={() => router.push(`/(app)/admin/campaigns/${item.id}`)}
-        activeOpacity={0.7}
-        className="flex-row overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
-      >
-        <View className={`w-1 ${accentColor}`} />
-        <View className="flex-1 p-4">
-          <View className="mb-2 flex-row items-center justify-between">
-            <Text className="flex-1 text-[15px] font-semibold" numberOfLines={1}>{item.title}</Text>
-            <StatusBadge status={item.status} />
-          </View>
-          <View className="flex-row flex-wrap items-center gap-3">
-            <View className="flex-row items-center gap-1">
-              <User color="#a3a3a3" width={12} height={12} />
-              <Text className="text-xs text-neutral-500">{item.clients?.name ?? 'No client'}</Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Truck color="#a3a3a3" width={12} height={12} />
-              <Text className="text-xs text-neutral-500">{item.driver_profile?.display_name ?? 'Unassigned'}</Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Clock color="#a3a3a3" width={12} height={12} />
-              <Text className="text-xs text-neutral-500">
-                {format(new Date(item.campaign_date), 'MMM d, yyyy')}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View className="items-center justify-center pr-3">
-          <ArrowRight color="#d4d4d4" width={16} height={16} />
-        </View>
-      </TouchableOpacity>
-    );
-  }
-
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <AppLogo size="sm" showText />
-        <TouchableOpacity
-          testID="sign-out-button"
-          accessibilityLabel="Sign out"
-          onPress={signOut}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-        >
-          <LogOut color="#737373" width={18} height={18} />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-1">
+          <AdminSettingsGearButton />
+          <TouchableOpacity
+            testID="sign-out-button"
+            accessibilityLabel="Sign out"
+            onPress={signOut}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+          >
+            <LogOut color="#737373" width={18} height={18} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View className="px-4 pt-3">
@@ -117,12 +123,17 @@ export function CampaignListScreen() {
             <FlatList
               data={filtered}
               keyExtractor={item => item.id}
-              renderItem={renderItem}
+              renderItem={({ item }) => (
+                <CampaignCard item={item} onPress={() => router.push(`/(app)/admin/campaigns/${item.id}`)} />
+              )}
               contentContainerStyle={{ padding: 16, gap: 12 }}
               ListEmptyComponent={(
-                <View className="items-center py-16">
-                  <Text className="text-sm text-neutral-500">No campaigns found</Text>
-                </View>
+                <EmptyStateWithAnimation
+                  source={lottieAssets.adminEmptySearch}
+                  message="No campaigns found"
+                  testID="admin-empty-campaign-animation"
+                  {...emptyStatePresets.adminCampaignList}
+                />
               )}
             />
           )}
