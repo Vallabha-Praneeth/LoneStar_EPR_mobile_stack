@@ -28,7 +28,24 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
       return null;
     throw error;
   }
-  return data as unknown as DriverCampaignData;
+
+  // Supabase joins can return an object or an array depending on the FK
+  // relationship detection. Normalize to match DriverCampaignData.
+  const raw = data as Record<string, unknown>;
+  const routes = raw.routes;
+  const normalizedRoutes = Array.isArray(routes)
+    ? (routes[0] ?? null)
+    : (routes ?? null);
+
+  return {
+    id: raw.id as string,
+    title: raw.title as string,
+    campaign_date: raw.campaign_date as string,
+    status: raw.status as DriverCampaignData['status'],
+    routes: normalizedRoutes as DriverCampaignData['routes'],
+    driver_shifts: (raw.driver_shifts ?? []) as DriverCampaignData['driver_shifts'],
+    campaign_photos: (raw.campaign_photos ?? []) as DriverCampaignData['campaign_photos'],
+  };
 }
 
 export async function startShift(campaignId: string, driverId: string): Promise<void> {

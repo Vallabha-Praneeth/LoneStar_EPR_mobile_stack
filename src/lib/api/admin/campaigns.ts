@@ -51,7 +51,18 @@ export async function fetchCampaigns(): Promise<CampaignRow[]> {
 
   if (error)
     throw error;
-  return (data ?? []) as unknown as CampaignRow[];
+
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id,
+    title: row.title,
+    campaign_date: row.campaign_date,
+    status: row.status,
+    clients: normalize(row.clients),
+    driver_profile: normalize(row.driver_profile),
+  })) as CampaignRow[];
 }
 
 export async function fetchCampaignDetail(id: string): Promise<CampaignDetail> {
@@ -73,7 +84,37 @@ export async function fetchCampaignDetail(id: string): Promise<CampaignDetail> {
 
   if (error)
     throw error;
-  return data as unknown as CampaignDetail;
+
+  // Supabase joins may return arrays instead of objects depending on FK
+  // detection. Normalize all single-record joins to match CampaignDetail.
+  const raw = data as Record<string, unknown>;
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  const costs = (raw.campaign_costs ?? []) as Array<Record<string, unknown>>;
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    campaign_date: raw.campaign_date,
+    status: raw.status,
+    route_id: raw.route_id,
+    internal_notes: raw.internal_notes,
+    client_billed_amount: raw.client_billed_amount,
+    client_id: raw.client_id,
+    driver_profile_id: raw.driver_profile_id,
+    routes: normalize(raw.routes),
+    clients: normalize(raw.clients),
+    driver_profile: normalize(raw.driver_profile),
+    driver_shifts: (raw.driver_shifts ?? []),
+    campaign_photos: (raw.campaign_photos ?? []),
+    campaign_costs: costs.map(c => ({
+      id: c.id,
+      amount: c.amount,
+      notes: c.notes,
+      cost_types: normalize(c.cost_types),
+    })),
+  } as CampaignDetail;
 }
 
 export async function createCampaign(input: CreateCampaignInput): Promise<string> {

@@ -70,7 +70,24 @@ async function fetchCampaignsRaw(range: AnalyticsRange): Promise<RawCampaignRow[
 
   if (error)
     throw error;
-  return (data ?? []) as unknown as RawCampaignRow[];
+
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id,
+    status: row.status,
+    client_billed_amount: row.client_billed_amount,
+    client_id: row.client_id,
+    driver_profile_id: row.driver_profile_id,
+    clients: normalize(row.clients),
+    driver_profile: normalize(row.driver_profile),
+    campaign_costs: ((row.campaign_costs ?? []) as Array<Record<string, unknown>>).map(c => ({
+      amount: c.amount,
+      cost_types: normalize(c.cost_types),
+    })),
+    driver_shifts: (row.driver_shifts ?? []),
+  })) as RawCampaignRow[];
 }
 
 export async function getSummary(range: AnalyticsRange): Promise<AnalyticsSummary> {

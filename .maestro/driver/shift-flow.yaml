@@ -76,8 +76,11 @@ env:
           id: start-shift-button
 
 # Confirm shift is active (end-shift-button is now visible)
-- assertVisible:
-    id: end-shift-button
+# Wait for the mutation + query refetch cycle to complete
+- extendedWaitUntil:
+    visible:
+      id: end-shift-button
+    timeout: 10000
 
 # Navigate to upload screen
 - tapOn:
