@@ -209,6 +209,7 @@ export function CreateCampaignScreen() {
     mutationFn: createCampaign,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
       Alert.alert('Success', 'Campaign created', [{ text: 'OK', onPress: () => router.back() }]);
     },
     onError: (err: Error) => Alert.alert('Error', err.message),

@@ -1,4 +1,5 @@
 import type {
+  AnalyticsFilters,
   AnalyticsRange,
   AnalyticsSummary,
   ClientBreakdownRow,
@@ -40,21 +41,31 @@ function getDateRange(range: AnalyticsRange): { from: string; to: string } {
   };
 }
 
-const fetchCache = new Map<AnalyticsRange, Promise<RawCampaignRow[]>>();
+const fetchCache = new Map<string, Promise<RawCampaignRow[]>>();
 
-function getCampaigns(range: AnalyticsRange): Promise<RawCampaignRow[]> {
-  const cached = fetchCache.get(range);
+function filtersKey(filters: AnalyticsFilters): string {
+  return JSON.stringify({
+    range: filters.range,
+    clientId: filters.clientId ?? null,
+    driverId: filters.driverId ?? null,
+    status: filters.status ?? null,
+  });
+}
+
+function getCampaigns(filters: AnalyticsFilters): Promise<RawCampaignRow[]> {
+  const key = filtersKey(filters);
+  const cached = fetchCache.get(key);
   if (cached)
     return cached;
-  const promise = fetchCampaignsRaw(range).finally(() => fetchCache.delete(range));
-  fetchCache.set(range, promise);
+  const promise = fetchCampaignsRaw(filters).finally(() => fetchCache.delete(key));
+  fetchCache.set(key, promise);
   return promise;
 }
 
-async function fetchCampaignsRaw(range: AnalyticsRange): Promise<RawCampaignRow[]> {
-  const { from, to } = getDateRange(range);
+async function fetchCampaignsRaw(filters: AnalyticsFilters): Promise<RawCampaignRow[]> {
+  const { from, to } = getDateRange(filters.range);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('campaigns')
     .select(`
       id, status, client_billed_amount,
@@ -65,8 +76,16 @@ async function fetchCampaignsRaw(range: AnalyticsRange): Promise<RawCampaignRow[
       driver_shifts ( started_at, ended_at, shift_status )
     `)
     .gte('campaign_date', from)
-    .lte('campaign_date', to)
-    .order('campaign_date', { ascending: false });
+    .lte('campaign_date', to);
+
+  if (filters.clientId)
+    query = query.eq('client_id', filters.clientId);
+  if (filters.driverId)
+    query = query.eq('driver_profile_id', filters.driverId);
+  if (filters.status)
+    query = query.eq('status', filters.status);
+
+  const { data, error } = await query.order('campaign_date', { ascending: false });
 
   if (error)
     throw error;
@@ -90,8 +109,8 @@ async function fetchCampaignsRaw(range: AnalyticsRange): Promise<RawCampaignRow[
   })) as RawCampaignRow[];
 }
 
-export async function getSummary(range: AnalyticsRange): Promise<AnalyticsSummary> {
-  const rows = await getCampaigns(range);
+export async function getSummary(filters: AnalyticsFilters): Promise<AnalyticsSummary> {
+  const rows = await getCampaigns(filters);
 
   let revenue = 0;
   let driverCost = 0;
@@ -135,8 +154,8 @@ export async function getSummary(range: AnalyticsRange): Promise<AnalyticsSummar
   };
 }
 
-export async function getClientBreakdown(range: AnalyticsRange): Promise<ClientBreakdownRow[]> {
-  const rows = await getCampaigns(range);
+export async function getClientBreakdown(filters: AnalyticsFilters): Promise<ClientBreakdownRow[]> {
+  const rows = await getCampaigns(filters);
   const map = new Map<string, { clientName: string; revenue: number; campaignCount: number }>();
 
   for (const row of rows) {
@@ -162,8 +181,8 @@ export async function getClientBreakdown(range: AnalyticsRange): Promise<ClientB
   return results.slice(0, TOP_N);
 }
 
-export async function getDriverBreakdown(range: AnalyticsRange): Promise<DriverBreakdownRow[]> {
-  const rows = await getCampaigns(range);
+export async function getDriverBreakdown(filters: AnalyticsFilters): Promise<DriverBreakdownRow[]> {
+  const rows = await getCampaigns(filters);
   const map = new Map<string, { driverName: string; hours: number; payout: number; campaignCount: number }>();
 
   for (const row of rows) {

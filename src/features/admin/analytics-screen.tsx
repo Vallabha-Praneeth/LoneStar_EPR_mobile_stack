@@ -1,5 +1,5 @@
 import type { BarDatum } from '@/components/ui/horizontal-bar-chart';
-import type { AnalyticsRange, AnalyticsSummary } from '@/lib/analytics';
+import type { AnalyticsFilters, AnalyticsRange, AnalyticsSummary, CampaignStatus } from '@/lib/analytics';
 import { useQuery } from '@tanstack/react-query';
 
 import * as React from 'react';
@@ -12,8 +12,9 @@ import { Text, View } from '@/components/ui';
 import { Card } from '@/components/ui/card';
 import { HorizontalBarChart } from '@/components/ui/horizontal-bar-chart';
 import { BarChart, Clock, DollarSign, Truck, Users } from '@/components/ui/icons';
+import { useModal } from '@/components/ui/modal';
+import { Options } from '@/components/ui/select';
 import {
-
   formatCurrency,
   formatHours,
   formatPercent,
@@ -21,6 +22,7 @@ import {
   getDriverBreakdown,
   getSummary,
 } from '@/lib/analytics';
+import { fetchClients, fetchDrivers } from '@/lib/api/admin/selectors';
 
 // ─── Range Picker ────────────────────────────────────────────────
 
@@ -28,6 +30,13 @@ const RANGES: { value: AnalyticsRange; label: string }[] = [
   { value: '3m', label: '3M' },
   { value: '6m', label: '6M' },
   { value: '1y', label: '1Y' },
+];
+
+const STATUSES: { value: CampaignStatus; label: string }[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'draft', label: 'Draft' },
 ];
 
 function RangePicker({
@@ -63,6 +72,62 @@ function RangePicker({
         </Pressable>
       ))}
     </View>
+  );
+}
+
+// ─── Filter Chip ─────────────────────────────────────────────────
+
+type FilterChipProps = {
+  placeholder: string;
+  selectedLabel?: string;
+  active: boolean;
+  options: { label: string; value: string }[];
+  currentValue: string | undefined;
+  onSelect: (value: string | undefined) => void;
+};
+
+function FilterChip({
+  placeholder,
+  selectedLabel,
+  active,
+  options,
+  currentValue,
+  onSelect,
+}: FilterChipProps) {
+  const modal = useModal();
+
+  const allOptions = React.useMemo(
+    () => [{ label: `All ${placeholder}s`, value: '' }, ...options],
+    [placeholder, options],
+  );
+
+  return (
+    <>
+      <Pressable
+        onPress={modal.present}
+        className={`flex-row items-center gap-1 rounded-lg px-3 py-1.5 ${
+          active ? 'bg-primary' : 'bg-neutral-100 dark:bg-neutral-700'
+        }`}
+      >
+        <Text
+          className={`text-xs font-semibold ${
+            active ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'
+          }`}
+          numberOfLines={1}
+        >
+          {selectedLabel ?? placeholder}
+        </Text>
+      </Pressable>
+      <Options
+        ref={modal.ref}
+        options={allOptions}
+        value={currentValue ?? ''}
+        onSelect={(opt) => {
+          onSelect(opt.value === '' ? undefined : String(opt.value));
+          modal.dismiss();
+        }}
+      />
+    </>
   );
 }
 
@@ -164,100 +229,165 @@ function SectionCard({
   );
 }
 
+// ─── Filter Header ───────────────────────────────────────────────
+
+type FilterHeaderProps = {
+  paddingTop: number;
+  range: AnalyticsRange;
+  clientId: string | undefined;
+  driverId: string | undefined;
+  status: CampaignStatus | undefined;
+  clientChipOptions: { label: string; value: string }[];
+  driverChipOptions: { label: string; value: string }[];
+  selectedClientLabel: string | undefined;
+  selectedDriverLabel: string | undefined;
+  selectedStatusLabel: string | undefined;
+  onRangeChange: (r: AnalyticsRange) => void;
+  onClientChange: (v: string | undefined) => void;
+  onDriverChange: (v: string | undefined) => void;
+  onStatusChange: (v: CampaignStatus | undefined) => void;
+  onClear: () => void;
+};
+
+function FilterHeader(p: FilterHeaderProps) {
+  return (
+    <View
+      className="border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+      style={{ paddingTop: p.paddingTop }}
+    >
+      <View className="flex-row items-center justify-between px-4 pb-2">
+        <AppLogo size="sm" showText />
+        <RangePicker value={p.range} onChange={p.onRangeChange} />
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8, flexDirection: 'row' }}
+      >
+        <FilterChip placeholder="Client" selectedLabel={p.selectedClientLabel} active={!!p.clientId} options={p.clientChipOptions} currentValue={p.clientId} onSelect={p.onClientChange} />
+        <FilterChip placeholder="Driver" selectedLabel={p.selectedDriverLabel} active={!!p.driverId} options={p.driverChipOptions} currentValue={p.driverId} onSelect={p.onDriverChange} />
+        <FilterChip placeholder="Status" selectedLabel={p.selectedStatusLabel} active={!!p.status} options={STATUSES.map(s => ({ label: s.label, value: s.value }))} currentValue={p.status} onSelect={v => p.onStatusChange(v as CampaignStatus | undefined)} />
+        {(p.clientId || p.driverId || p.status) && (
+          <Pressable onPress={p.onClear} className="rounded-lg bg-neutral-200 px-3 py-1.5 dark:bg-neutral-600">
+            <Text className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Clear</Text>
+          </Pressable>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Data Content ────────────────────────────────────────────────
+
+type DataContentProps = {
+  paddingBottom: number;
+  isLoading: boolean;
+  isError: boolean;
+  summary: AnalyticsSummary | undefined;
+  clientBars: BarDatum[];
+  driverBars: BarDatum[];
+};
+
+function DataContent({ paddingBottom, isLoading, isError, summary, clientBars, driverBars }: DataContentProps) {
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+  if (isError) {
+    return (
+      <View className="flex-1 items-center justify-center px-6">
+        <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+          Couldn't load analytics right now. Please try again.
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom }} showsVerticalScrollIndicator={false}>
+      {summary && <KpiGrid summary={summary} />}
+      {clientBars.length > 0 && (
+        <SectionCard title="Top Clients by Revenue">
+          <HorizontalBarChart data={clientBars} barColor="#22c55e" />
+        </SectionCard>
+      )}
+      {driverBars.length > 0 && (
+        <SectionCard title="Top Drivers by Payout">
+          <HorizontalBarChart data={driverBars} barColor="#3b82f6" />
+        </SectionCard>
+      )}
+      {summary && summary.totalCampaigns === 0 && (
+        <EmptyStateWithAnimation source={lottieAssets.adminEmptySearch} message="No campaign data for this period" testID="admin-analytics-empty-animation" {...emptyStatePresets.adminAnalytics} />
+      )}
+    </ScrollView>
+  );
+}
+
 // ─── Main Screen ─────────────────────────────────────────────────
 
 export function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
   const [range, setRange] = React.useState<AnalyticsRange>('3m');
+  const [clientId, setClientId] = React.useState<string | undefined>();
+  const [driverId, setDriverId] = React.useState<string | undefined>();
+  const [status, setStatus] = React.useState<CampaignStatus | undefined>();
 
-  const summaryQuery = useQuery({
-    queryKey: ['analytics-summary', range],
-    queryFn: () => getSummary(range),
-  });
+  const filters: AnalyticsFilters = React.useMemo(
+    () => ({ range, clientId, driverId, status }),
+    [range, clientId, driverId, status],
+  );
+  const filterKey = React.useMemo(() => JSON.stringify(filters), [filters]);
 
-  const clientsQuery = useQuery({
-    queryKey: ['analytics-clients', range],
-    queryFn: () => getClientBreakdown(range),
-  });
+  const summaryQ = useQuery({ queryKey: ['analytics-summary', filterKey], queryFn: () => getSummary(filters) });
+  const clientsQ = useQuery({ queryKey: ['analytics-clients', filterKey], queryFn: () => getClientBreakdown(filters) });
+  const driversQ = useQuery({ queryKey: ['analytics-drivers', filterKey], queryFn: () => getDriverBreakdown(filters) });
 
-  const driversQuery = useQuery({
-    queryKey: ['analytics-drivers', range],
-    queryFn: () => getDriverBreakdown(range),
-  });
+  const { data: clientOptions = [] } = useQuery({ queryKey: ['selector-clients'], queryFn: fetchClients, staleTime: 5 * 60 * 1000 });
+  const { data: driverOptions = [] } = useQuery({ queryKey: ['selector-drivers'], queryFn: fetchDrivers, staleTime: 5 * 60 * 1000 });
 
-  const isLoading = summaryQuery.isLoading || clientsQuery.isLoading || driversQuery.isLoading;
-  const isError = summaryQuery.isError || clientsQuery.isError || driversQuery.isError;
+  const clientChipOptions = React.useMemo(() => clientOptions.map(c => ({ label: c.name, value: c.id })), [clientOptions]);
+  const driverChipOptions = React.useMemo(() => driverOptions.map(d => ({ label: d.display_name, value: d.id })), [driverOptions]);
 
-  const clientBars: BarDatum[] = (clientsQuery.data ?? []).map(c => ({
-    label: c.clientName,
-    value: c.revenue,
-    formattedValue: formatCurrency(c.revenue),
-  }));
+  const selectedClientLabel = clientId ? clientOptions.find(c => c.id === clientId)?.name : undefined;
+  const selectedDriverLabel = driverId ? driverOptions.find(d => d.id === driverId)?.display_name : undefined;
+  const selectedStatusLabel = status ? STATUSES.find(s => s.value === status)?.label : undefined;
 
-  const driverBars: BarDatum[] = (driversQuery.data ?? []).map(d => ({
-    label: d.driverName,
-    value: d.payout,
-    formattedValue: formatCurrency(d.payout),
-  }));
+  const clientBars: BarDatum[] = (clientsQ.data ?? []).map(c => ({ label: c.clientName, value: c.revenue, formattedValue: formatCurrency(c.revenue) }));
+  const driverBars: BarDatum[] = (driversQ.data ?? []).map(d => ({ label: d.driverName, value: d.payout, formattedValue: formatCurrency(d.payout) }));
 
   return (
     <View testID="analytics-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-      {/* Header */}
-      <View
-        className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pb-3 dark:border-neutral-700 dark:bg-neutral-800"
-        style={{ paddingTop: insets.top + 8 }}
-      >
-        <AppLogo size="sm" showText />
-        <RangePicker value={range} onChange={setRange} />
-      </View>
-
-      {isLoading
-        ? (
-            <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" />
-            </View>
-          )
-        : isError
-          ? (
-              <View className="flex-1 items-center justify-center px-6">
-                <Text className="text-center text-sm text-neutral-500 dark:text-neutral-400">
-                  Couldn't load analytics right now. Please try again.
-                </Text>
-              </View>
-            )
-          : (
-              <ScrollView
-                contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* KPI Cards */}
-                {summaryQuery.data && <KpiGrid summary={summaryQuery.data} />}
-
-                {/* Top Clients */}
-                {clientBars.length > 0 && (
-                  <SectionCard title="Top Clients by Revenue">
-                    <HorizontalBarChart data={clientBars} barColor="#22c55e" />
-                  </SectionCard>
-                )}
-
-                {/* Top Drivers */}
-                {driverBars.length > 0 && (
-                  <SectionCard title="Top Drivers by Payout">
-                    <HorizontalBarChart data={driverBars} barColor="#3b82f6" />
-                  </SectionCard>
-                )}
-
-                {/* Empty state */}
-                {summaryQuery.data && summaryQuery.data.totalCampaigns === 0 && (
-                  <EmptyStateWithAnimation
-                    source={lottieAssets.adminEmptySearch}
-                    message="No campaign data for this period"
-                    testID="admin-analytics-empty-animation"
-                    {...emptyStatePresets.adminAnalytics}
-                  />
-                )}
-              </ScrollView>
-            )}
+      <FilterHeader
+        paddingTop={insets.top + 8}
+        range={range}
+        clientId={clientId}
+        driverId={driverId}
+        status={status}
+        clientChipOptions={clientChipOptions}
+        driverChipOptions={driverChipOptions}
+        selectedClientLabel={selectedClientLabel}
+        selectedDriverLabel={selectedDriverLabel}
+        selectedStatusLabel={selectedStatusLabel}
+        onRangeChange={setRange}
+        onClientChange={setClientId}
+        onDriverChange={setDriverId}
+        onStatusChange={setStatus}
+        onClear={() => {
+          setClientId(undefined);
+          setDriverId(undefined);
+          setStatus(undefined);
+        }}
+      />
+      <DataContent
+        paddingBottom={insets.bottom + 16}
+        isLoading={summaryQ.isLoading || clientsQ.isLoading || driversQ.isLoading}
+        isError={summaryQ.isError || clientsQ.isError || driversQ.isError}
+        summary={summaryQ.data}
+        clientBars={clientBars}
+        driverBars={driverBars}
+      />
     </View>
   );
 }
