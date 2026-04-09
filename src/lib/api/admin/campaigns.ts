@@ -7,6 +7,8 @@ export type CampaignRow = {
   status: 'draft' | 'pending' | 'active' | 'completed';
   clients: { name: string } | null;
   driver_profile: { display_name: string } | null;
+  campaign_photos: { id: string }[];
+  campaign_costs: { amount: number }[];
 };
 
 export type CampaignDetail = {
@@ -45,7 +47,9 @@ export async function fetchCampaigns(): Promise<CampaignRow[]> {
     .select(`
       id, title, campaign_date, status,
       clients ( name ),
-      driver_profile:profiles!driver_profile_id ( display_name )
+      driver_profile:profiles!driver_profile_id ( display_name ),
+      campaign_photos ( id ),
+      campaign_costs ( amount )
     `)
     .order('campaign_date', { ascending: false });
 
@@ -62,6 +66,8 @@ export async function fetchCampaigns(): Promise<CampaignRow[]> {
     status: row.status,
     clients: normalize(row.clients),
     driver_profile: normalize(row.driver_profile),
+    campaign_photos: (row.campaign_photos ?? []),
+    campaign_costs: (row.campaign_costs ?? []),
   })) as CampaignRow[];
 }
 
