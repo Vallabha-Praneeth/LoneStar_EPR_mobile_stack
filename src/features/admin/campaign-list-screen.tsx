@@ -31,6 +31,7 @@ function totalCost(c: CampaignRow): number {
 
 function CampaignCard({ item, onPress }: { item: CampaignRow; onPress: () => void }) {
   const accentColor = STATUS_ACCENT[item.status] ?? STATUS_ACCENT.draft;
+  const cost = totalCost(item);
 
   return (
     <TouchableOpacity
@@ -69,11 +70,11 @@ function CampaignCard({ item, onPress }: { item: CampaignRow; onPress: () => voi
               {(item.campaign_photos?.length ?? 0) === 1 ? 'photo' : 'photos'}
             </Text>
           </View>
-          {totalCost(item) > 0 && (
+          {cost > 0 && (
             <View className="flex-row items-center gap-1">
               <DollarSign color="#a3a3a3" width={12} height={12} />
               <Text className="text-xs text-neutral-500">
-                {totalCost(item).toFixed(2)}
+                {cost.toFixed(2)}
               </Text>
             </View>
           )}

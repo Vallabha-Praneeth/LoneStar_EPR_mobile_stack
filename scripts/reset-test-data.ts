@@ -36,7 +36,7 @@ async function reset() {
     .delete()
     .eq('campaign_id', CAMPAIGN_ID);
   if (e1)
-    console.warn('campaign_photos:', e1.message);
+    throw new Error(`campaign_photos cleanup failed: ${e1.message}`);
 
   // 2. Delete test shifts
   const { error: e2 } = await supabase
@@ -44,7 +44,7 @@ async function reset() {
     .delete()
     .eq('campaign_id', CAMPAIGN_ID);
   if (e2)
-    console.warn('driver_shifts:', e2.message);
+    throw new Error(`driver_shifts cleanup failed: ${e2.message}`);
 
   // 3. Reset campaign to active + today
   const { error: e3 } = await supabase
@@ -52,7 +52,7 @@ async function reset() {
     .update({ status: 'active', campaign_date: today })
     .eq('id', CAMPAIGN_ID);
   if (e3)
-    console.warn('campaigns:', e3.message);
+    throw new Error(`campaigns reset failed: ${e3.message}`);
 
   console.log('Reset complete.');
 }

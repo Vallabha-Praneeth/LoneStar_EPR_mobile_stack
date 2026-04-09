@@ -147,9 +147,18 @@ export async function updateCampaign(id: string, input: Partial<CreateCampaignIn
 
 export async function deleteCampaign(id: string): Promise<void> {
   // Delete related records first (order matters — FK constraints)
-  await supabase.from('campaign_costs').delete().eq('campaign_id', id);
-  await supabase.from('campaign_photos').delete().eq('campaign_id', id);
-  await supabase.from('driver_shifts').delete().eq('campaign_id', id);
+  const { error: e1 } = await supabase.from('campaign_costs').delete().eq('campaign_id', id);
+  if (e1)
+    throw new Error(`Failed to delete campaign costs: ${e1.message}`);
+
+  const { error: e2 } = await supabase.from('campaign_photos').delete().eq('campaign_id', id);
+  if (e2)
+    throw new Error(`Failed to delete campaign photos: ${e2.message}`);
+
+  const { error: e3 } = await supabase.from('driver_shifts').delete().eq('campaign_id', id);
+  if (e3)
+    throw new Error(`Failed to delete driver shifts: ${e3.message}`);
+
   const { error } = await supabase.from('campaigns').delete().eq('id', id);
   if (error)
     throw error;
