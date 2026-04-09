@@ -210,6 +210,7 @@ function DeleteRouteButton({ routeId, routeName }: { routeId: string; routeName:
     mutationFn: () => deleteRoute(routeId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['route-edit', routeId] });
       showMessage({ message: 'Route deleted', type: 'success' });
       router.back();
     },
