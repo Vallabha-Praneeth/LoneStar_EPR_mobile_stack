@@ -2,6 +2,15 @@
 
 export type AnalyticsRange = '3m' | '6m' | '1y';
 
+export type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed';
+
+export type AnalyticsFilters = {
+  range: AnalyticsRange;
+  clientId?: string;
+  driverId?: string;
+  status?: CampaignStatus;
+};
+
 export type AnalyticsSummary = {
   revenue: number;
   driverCost: number;
