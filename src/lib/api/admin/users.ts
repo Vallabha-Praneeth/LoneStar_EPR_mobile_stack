@@ -19,7 +19,20 @@ export async function fetchUsers(): Promise<UserRow[]> {
 
   if (error)
     throw error;
-  return (data ?? []) as unknown as UserRow[];
+
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id,
+    display_name: row.display_name,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    is_active: row.is_active,
+    created_at: row.created_at,
+    clients: normalize(row.clients),
+  })) as UserRow[];
 }
 
 export async function toggleUserActive(userId: string, isActive: boolean): Promise<void> {

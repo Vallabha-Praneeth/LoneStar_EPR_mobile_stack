@@ -29,7 +29,7 @@ env:
           clearState: true
           arguments:
             isE2E: 'true'
-      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8083%3FdisableOnboarding%3D1'
+      - openLink: 'exp+adtruck-driver-native://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 
 # Android launch — clearState wipes app data including the saved Metro URL.
 # We must: (1) clear state, (2) stop app, (3) open deep link which both
@@ -76,8 +76,11 @@ env:
           id: start-shift-button
 
 # Confirm shift is active (end-shift-button is now visible)
-- assertVisible:
-    id: end-shift-button
+# Wait for the mutation + query refetch cycle to complete
+- extendedWaitUntil:
+    visible:
+      id: end-shift-button
+    timeout: 10000
 
 # Navigate to upload screen
 - tapOn:

@@ -21,7 +21,6 @@ export type DriverShiftHistoryRow = {
     id: string;
     title: string;
     campaign_date: string;
-    driver_daily_wage: number | null;
   } | null;
 };
 
@@ -89,7 +88,7 @@ export async function fetchDriverShiftHistory(profileId: string): Promise<Driver
   const { data, error } = await supabase
     .from('driver_shifts')
     .select(
-      'id, started_at, ended_at, campaigns ( id, title, campaign_date, driver_daily_wage )',
+      'id, started_at, ended_at, campaigns ( id, title, campaign_date )',
     )
     .eq('driver_profile_id', profileId)
     .order('started_at', { ascending: false });

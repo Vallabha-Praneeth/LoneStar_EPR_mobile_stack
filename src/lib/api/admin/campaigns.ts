@@ -7,6 +7,8 @@ export type CampaignRow = {
   status: 'draft' | 'pending' | 'active' | 'completed';
   clients: { name: string } | null;
   driver_profile: { display_name: string } | null;
+  campaign_photos: { id: string }[];
+  campaign_costs: { amount: number }[];
 };
 
 export type CampaignDetail = {
@@ -14,17 +16,17 @@ export type CampaignDetail = {
   title: string;
   campaign_date: string;
   status: 'draft' | 'pending' | 'active' | 'completed';
-  route_code: string | null;
+  route_id: string | null;
+  routes: { name: string } | null;
   internal_notes: string | null;
-  driver_daily_wage: number | null;
-  transport_cost: number | null;
-  other_cost: number | null;
   client_id: string;
+  client_billed_amount: number | null;
   driver_profile_id: string | null;
   clients: { name: string } | null;
   driver_profile: { display_name: string } | null;
   driver_shifts: { id: string; started_at: string; ended_at: string | null }[];
   campaign_photos: { id: string; submitted_at: string; note: string | null; storage_path: string }[];
+  campaign_costs: { id: string; amount: number; notes: string | null; cost_types: { name: string } | null }[];
 };
 
 export type CreateCampaignInput = {
@@ -32,11 +34,9 @@ export type CreateCampaignInput = {
   campaign_date: string;
   client_id: string;
   driver_profile_id: string | null;
-  route_code: string | null;
+  route_id: string | null;
   internal_notes: string | null;
-  driver_daily_wage: number | null;
-  transport_cost: number | null;
-  other_cost: number | null;
+  client_billed_amount: number | null;
   created_by: string;
   status: string;
 };
@@ -47,33 +47,80 @@ export async function fetchCampaigns(): Promise<CampaignRow[]> {
     .select(`
       id, title, campaign_date, status,
       clients ( name ),
-      driver_profile:profiles!driver_profile_id ( display_name )
+      driver_profile:profiles!driver_profile_id ( display_name ),
+      campaign_photos ( id ),
+      campaign_costs ( amount )
     `)
     .order('campaign_date', { ascending: false });
 
   if (error)
     throw error;
-  return (data ?? []) as unknown as CampaignRow[];
+
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id,
+    title: row.title,
+    campaign_date: row.campaign_date,
+    status: row.status,
+    clients: normalize(row.clients),
+    driver_profile: normalize(row.driver_profile),
+    campaign_photos: (row.campaign_photos ?? []),
+    campaign_costs: (row.campaign_costs ?? []),
+  })) as CampaignRow[];
 }
 
 export async function fetchCampaignDetail(id: string): Promise<CampaignDetail> {
   const { data, error } = await supabase
     .from('campaigns')
     .select(`
-      id, title, campaign_date, status, route_code,
-      internal_notes, driver_daily_wage, transport_cost, other_cost,
+      id, title, campaign_date, status, route_id,
+      internal_notes, client_billed_amount,
       client_id, driver_profile_id,
+      routes ( name ),
       clients ( name ),
       driver_profile:profiles!driver_profile_id ( display_name ),
       driver_shifts ( id, started_at, ended_at ),
-      campaign_photos ( id, submitted_at, note, storage_path )
+      campaign_photos ( id, submitted_at, note, storage_path ),
+      campaign_costs ( id, amount, notes, cost_types ( name ) )
     `)
     .eq('id', id)
     .single();
 
   if (error)
     throw error;
-  return data as unknown as CampaignDetail;
+
+  // Supabase joins may return arrays instead of objects depending on FK
+  // detection. Normalize all single-record joins to match CampaignDetail.
+  const raw = data as Record<string, unknown>;
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  const costs = (raw.campaign_costs ?? []) as Array<Record<string, unknown>>;
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    campaign_date: raw.campaign_date,
+    status: raw.status,
+    route_id: raw.route_id,
+    internal_notes: raw.internal_notes,
+    client_billed_amount: raw.client_billed_amount,
+    client_id: raw.client_id,
+    driver_profile_id: raw.driver_profile_id,
+    routes: normalize(raw.routes),
+    clients: normalize(raw.clients),
+    driver_profile: normalize(raw.driver_profile),
+    driver_shifts: (raw.driver_shifts ?? []),
+    campaign_photos: (raw.campaign_photos ?? []),
+    campaign_costs: costs.map(c => ({
+      id: c.id,
+      amount: c.amount,
+      notes: c.notes,
+      cost_types: normalize(c.cost_types),
+    })),
+  } as CampaignDetail;
 }
 
 export async function createCampaign(input: CreateCampaignInput): Promise<string> {
@@ -99,7 +146,8 @@ export async function updateCampaign(id: string, input: Partial<CreateCampaignIn
 }
 
 export async function deleteCampaign(id: string): Promise<void> {
-  // Delete related records first
+  // Delete related records first (order matters — FK constraints)
+  await supabase.from('campaign_costs').delete().eq('campaign_id', id);
   await supabase.from('campaign_photos').delete().eq('campaign_id', id);
   await supabase.from('driver_shifts').delete().eq('campaign_id', id);
   const { error } = await supabase.from('campaigns').delete().eq('id', id);

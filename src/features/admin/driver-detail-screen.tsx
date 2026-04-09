@@ -28,20 +28,17 @@ function shiftDurationMins(startIso: string, endIso: string): number {
   return Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
 }
 
-function computeShiftTotals(shifts: DriverShiftHistoryRow[]): { totalMins: number; totalEarnings: number } {
+function computeShiftTotals(shifts: DriverShiftHistoryRow[], baseDailyWage: number | null): { totalMins: number; totalEarnings: number } {
   let totalMins = 0;
-  const wageByCampaign = new Map<string, number>();
+  const uniqueCampaigns = new Set<string>();
   for (const s of shifts) {
     if (s.ended_at)
       totalMins += shiftDurationMins(s.started_at, s.ended_at);
     const cid = s.campaigns?.id;
-    const w = s.campaigns?.driver_daily_wage;
-    if (cid && w != null && !wageByCampaign.has(cid))
-      wageByCampaign.set(cid, Number(w));
+    if (cid)
+      uniqueCampaigns.add(cid);
   }
-  let totalEarnings = 0;
-  for (const v of wageByCampaign.values())
-    totalEarnings += v;
+  const totalEarnings = baseDailyWage != null ? baseDailyWage * uniqueCampaigns.size : 0;
   return { totalMins, totalEarnings };
 }
 
@@ -51,7 +48,7 @@ function ShiftHistoryCard({ row }: { row: DriverShiftHistoryRow }) {
   const dateStr = c?.campaign_date ? format(new Date(`${c.campaign_date}T12:00:00`), 'MMM d, yyyy') : '';
   const hours
     = row.ended_at ? formatDurationMins(shiftDurationMins(row.started_at, row.ended_at)) : 'In progress';
-  const wage = c?.driver_daily_wage != null ? `$${Number(c.driver_daily_wage).toFixed(2)}` : '—';
+  // Wage display removed — now tracked per-driver on drivers table, not per-campaign
 
   return (
     <View className="mb-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
@@ -67,9 +64,6 @@ function ShiftHistoryCard({ row }: { row: DriverShiftHistoryRow }) {
         <Text className="text-xs text-neutral-500">
           Hours:
           {hours}
-          {' '}
-          · Wage:
-          {wage}
         </Text>
       </View>
     </View>
@@ -329,11 +323,13 @@ function DriverProfileForm({
 function DriverShiftsSection({
   shifts,
   loading,
+  baseDailyWage,
 }: {
   shifts: DriverShiftHistoryRow[];
   loading: boolean;
+  baseDailyWage: number | null;
 }) {
-  const { totalMins, totalEarnings } = computeShiftTotals(shifts);
+  const { totalMins, totalEarnings } = computeShiftTotals(shifts, baseDailyWage);
 
   return (
     <>
@@ -419,7 +415,7 @@ export function DriverDetailScreen() {
             </View>
           )}
 
-          <DriverShiftsSection shifts={shifts} loading={shiftsQuery.isLoading} />
+          <DriverShiftsSection shifts={shifts} loading={shiftsQuery.isLoading} baseDailyWage={driver?.base_daily_wage ?? null} />
 
           <DriverProfileForm
             key={formKey}

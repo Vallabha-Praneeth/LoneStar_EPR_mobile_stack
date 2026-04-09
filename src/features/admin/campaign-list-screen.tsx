@@ -13,6 +13,8 @@ import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { ArrowRight, Clock, LogOut, Truck, User } from '@/components/ui/icons';
+import { Camera } from '@/components/ui/icons/camera';
+import { DollarSign } from '@/components/ui/icons/dollar-sign';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchCampaigns } from '@/lib/api/admin/campaigns';
 
@@ -22,6 +24,10 @@ const STATUS_ACCENT: Record<string, string> = {
   pending: 'bg-amber-500',
   draft: 'bg-neutral-300',
 };
+
+function totalCost(c: CampaignRow): number {
+  return (c.campaign_costs ?? []).reduce((sum, cc) => sum + cc.amount, 0);
+}
 
 function CampaignCard({ item, onPress }: { item: CampaignRow; onPress: () => void }) {
   const accentColor = STATUS_ACCENT[item.status] ?? STATUS_ACCENT.draft;
@@ -53,6 +59,24 @@ function CampaignCard({ item, onPress }: { item: CampaignRow; onPress: () => voi
               {format(new Date(`${item.campaign_date}T12:00:00`), 'MMM d, yyyy')}
             </Text>
           </View>
+        </View>
+        <View className="mt-1.5 flex-row items-center gap-3">
+          <View className="flex-row items-center gap-1">
+            <Camera color="#a3a3a3" width={12} height={12} />
+            <Text className="text-xs text-neutral-500">
+              {item.campaign_photos?.length ?? 0}
+              {' '}
+              {(item.campaign_photos?.length ?? 0) === 1 ? 'photo' : 'photos'}
+            </Text>
+          </View>
+          {totalCost(item) > 0 && (
+            <View className="flex-row items-center gap-1">
+              <DollarSign color="#a3a3a3" width={12} height={12} />
+              <Text className="text-xs text-neutral-500">
+                {totalCost(item).toFixed(2)}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       <View className="items-center justify-center pr-3">

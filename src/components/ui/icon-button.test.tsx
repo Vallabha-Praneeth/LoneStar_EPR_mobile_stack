@@ -7,9 +7,10 @@ import { IconButton } from './icon-button';
 
 // useUniwind requires a Uniwind provider that is not present in the test
 // wrapper. Mock it here so all tests run in isolation with a stable theme.
-jest.mock('uniwind', () => ({
-  useUniwind: () => ({ theme: 'light' }),
-}));
+jest.mock('uniwind', () => {
+  const stub = () => ({ theme: 'light' });
+  return { useUniwind: stub };
+});
 
 afterEach(cleanup);
 
@@ -26,7 +27,7 @@ describe('iconButton component', () => {
     render(
       <IconButton
         testID="icon-button"
-        icon={<MockIcon testID="mock-icon" />}
+        icon={color => <MockIcon testID="mock-icon" color={color} />}
         accessibilityLabel="Open menu"
       />,
     );
@@ -37,7 +38,7 @@ describe('iconButton component', () => {
     render(
       <IconButton
         testID="icon-button"
-        icon={<MockIcon testID="mock-icon" />}
+        icon={color => <MockIcon testID="mock-icon" color={color} />}
         accessibilityLabel="Open menu"
       />,
     );
@@ -50,7 +51,7 @@ describe('iconButton component', () => {
     render(
       <IconButton
         testID="icon-button"
-        icon={<MockIcon testID="mock-icon" />}
+        icon={color => <MockIcon testID="mock-icon" color={color} />}
         accessibilityLabel="Open menu"
         loading
       />,
@@ -65,7 +66,7 @@ describe('iconButton component', () => {
     render(
       <IconButton
         testID="icon-button"
-        icon={<MockIcon testID="mock-icon" />}
+        icon={color => <MockIcon testID="mock-icon" color={color} />}
         accessibilityLabel="Open menu"
         disabled
       />,
@@ -77,7 +78,7 @@ describe('iconButton component', () => {
     render(
       <IconButton
         testID="icon-button"
-        icon={<MockIcon testID="mock-icon" />}
+        icon={color => <MockIcon testID="mock-icon" color={color} />}
         accessibilityLabel="Open menu"
         variant="default"
       />,

@@ -14,7 +14,6 @@ export async function fetchClients(): Promise<ClientOption[]> {
   const { data, error } = await supabase
     .from('clients')
     .select('id, name')
-    .eq('is_active', true)
     .order('name');
 
   if (error)

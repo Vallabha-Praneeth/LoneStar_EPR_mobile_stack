@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
+import { LaunchArguments } from 'react-native-launch-arguments';
 import { lottieAssets, UploadProgressAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, ChevronLeft, ImageIcon, Upload } from '@/components/ui/icons';
@@ -20,6 +21,9 @@ import { fetchDriverCampaign } from '@/lib/api/driver/campaign';
 import { uploadPhoto } from '@/lib/api/driver/photos';
 import { motionTokens } from '@/lib/motion/tokens';
 import { supabase } from '@/lib/supabase';
+
+// Skip WhatsApp notifications during E2E tests (Meta compliance)
+const isE2E = LaunchArguments.value<{ isE2E?: string }>().isE2E === 'true';
 
 // iOS simulator has no camera — fall back to gallery
 const IS_IOS_SIMULATOR = Platform.OS === 'ios' && !Device.isDevice;
@@ -141,16 +145,18 @@ export function UploadScreen() {
       uploadPhoto({ imageUri: imageUri!, campaignId: campaign!.id, driverId: profile!.id, note }),
     onSuccess: (photoId: string) => {
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
-      supabase.functions
-        .invoke('send-whatsapp-photo', {
-          body: { campaignId: campaign!.id, photoId },
-        })
-        .catch(() => {
-          showMessage({
-            message: 'Photo uploaded, but WhatsApp notification failed.',
-            type: 'warning',
+      if (!isE2E) {
+        supabase.functions
+          .invoke('send-whatsapp-photo', {
+            body: { campaignId: campaign!.id, photoId },
+          })
+          .catch(() => {
+            showMessage({
+              message: 'Photo uploaded, but WhatsApp notification failed.',
+              type: 'warning',
+            });
           });
-        });
+      }
       router.replace('/(app)/upload-success');
     },
     onError: (err: Error) =>

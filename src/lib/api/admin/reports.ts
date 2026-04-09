@@ -25,5 +25,18 @@ export async function fetchReportData(): Promise<ReportCampaign[]> {
 
   if (error)
     throw error;
-  return (data ?? []) as unknown as ReportCampaign[];
+
+  const normalize = (val: unknown) =>
+    Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id,
+    title: row.title,
+    campaign_date: row.campaign_date,
+    status: row.status,
+    clients: normalize(row.clients),
+    driver_profile: normalize(row.driver_profile),
+    campaign_photos: (row.campaign_photos ?? []),
+    driver_shifts: (row.driver_shifts ?? []),
+  })) as ReportCampaign[];
 }

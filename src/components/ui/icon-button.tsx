@@ -27,10 +27,10 @@ type Variant = keyof typeof VARIANT_ICON_COLORS;
 
 type IconButtonProps = {
   /**
-   * The icon element to render. Typically an SVG from @/components/ui/icons.
-   * Its `color` prop is automatically set from the active variant + color scheme.
+   * Render function that receives the derived icon color.
+   * Example: `icon={(color) => <MenuIcon color={color} />}`
    */
-  icon: React.ReactNode;
+  icon: (color: string) => React.ReactNode;
   /**
    * Overrides the auto-derived icon color. Use only when the variant color is
    * not appropriate (e.g. a custom branded icon button).
@@ -68,16 +68,6 @@ export function IconButton({
         ? DISABLED_ICON_COLOR
         : VARIANT_ICON_COLORS[(variant ?? 'default') as Variant][scheme];
 
-  // Inject `color` into the icon if it is a valid React element.
-  // All icons in this project accept `color` via SvgProps — this is the established pattern.
-  const coloredIcon = React.useMemo(
-    () =>
-      React.isValidElement<{ color?: string }>(icon)
-        ? React.cloneElement(icon, { color: derivedColor })
-        : icon,
-    [icon, derivedColor],
-  );
-
   return (
     <Button
       size="icon"
@@ -92,12 +82,7 @@ export function IconButton({
       accessibilityRole="button"
       {...props}
     >
-      {/*
-       * null is falsy — when loading, Button falls through to its own render
-       * path and shows the ActivityIndicator (correctly colored by its variant's
-       * indicator slot class). The Pressable is also disabled via loading=true.
-       */}
-      {loading ? null : coloredIcon}
+      {loading ? null : icon(derivedColor)}
     </Button>
   );
 }
