@@ -16,7 +16,7 @@ export function InfoCard({ icon, label, value, compact }: InfoCardProps) {
         {typeof icon === 'string'
           ? <Text className="text-sm">{icon}</Text>
           : <View className="size-4 items-center justify-center">{icon}</View>}
-        <Text className="text-xs font-medium tracking-wider text-neutral-400 uppercase">{label}</Text>
+        <Text className="text-xs font-semibold tracking-widest text-slate-700 uppercase dark:text-slate-200">{label}</Text>
       </View>
       <Text className={`font-semibold ${compact ? 'text-sm' : ''}`}>{value}</Text>
     </Card>

@@ -5,7 +5,6 @@ import * as React from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   TouchableOpacity,
 } from 'react-native';
@@ -18,7 +17,6 @@ import { SearchBar } from '@/components/search-bar';
 import { Switch, Text, View } from '@/components/ui';
 import { ArrowRight, MapPin, Plus } from '@/components/ui/icons';
 import {
-  deleteRoute,
   fetchAdminRoutes,
   toggleRouteActive,
 } from '@/lib/api/admin/routes';
@@ -26,22 +24,24 @@ import {
 function RouteRow({
   item,
   onToggle,
-  onDelete,
   onOpen,
   togglePending,
 }: {
   item: AdminRouteRow;
   onToggle: () => void;
-  onDelete: () => void;
   onOpen: () => void;
   togglePending: boolean;
 }) {
   const stopCount = item.route_stops?.length ?? 0;
 
   return (
-    <View className="mb-3 flex-row overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
+    <TouchableOpacity
+      onPress={onOpen}
+      activeOpacity={0.7}
+      className="mb-3 flex-row overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+    >
       <View className={`w-1 ${item.is_active ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'}`} />
-      <TouchableOpacity className="min-w-0 flex-1 p-4" onPress={onOpen} activeOpacity={0.7}>
+      <View className="min-w-0 flex-1 p-4">
         <View className="flex-row items-start justify-between gap-2">
           <Text className="flex-1 text-[15px] font-semibold" numberOfLines={1}>{item.name}</Text>
           {!item.is_active && (
@@ -63,7 +63,7 @@ function RouteRow({
             {stopCount === 1 ? 'stop' : 'stops'}
           </Text>
         </View>
-      </TouchableOpacity>
+      </View>
       <View className="flex-row items-center gap-2 pr-3">
         <Switch
           checked={item.is_active}
@@ -71,12 +71,9 @@ function RouteRow({
           disabled={togglePending}
           accessibilityLabel={`Toggle active for ${item.name}`}
         />
-        <TouchableOpacity onPress={onDelete} hitSlop={12} accessibilityLabel="Delete route">
-          <Text className="text-xs font-medium text-red-600 dark:text-red-400">Delete</Text>
-        </TouchableOpacity>
         <ArrowRight color="#d4d4d4" width={16} height={16} />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -100,28 +97,12 @@ export function RoutesScreen() {
     onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteRoute,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-routes'] });
-      showMessage({ message: 'Route deleted', type: 'success' });
-    },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
-  });
-
   const filtered = routes.filter((r) => {
     const q = search.toLowerCase();
     if (!q)
       return true;
     return r.name.toLowerCase().includes(q) || (r.city ?? '').toLowerCase().includes(q);
   });
-
-  function confirmDelete(id: string, name: string) {
-    Alert.alert('Delete route', `Remove "${name}"? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
-    ]);
-  }
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
@@ -169,7 +150,6 @@ export function RoutesScreen() {
               item={item}
               onOpen={() => router.push(`/(app)/admin/route-form?id=${item.id}` as const)}
               onToggle={() => toggleMutation.mutate({ id: item.id, is_active: item.is_active })}
-              onDelete={() => confirmDelete(item.id, item.name)}
               togglePending={toggleMutation.isPending}
             />
           )}
