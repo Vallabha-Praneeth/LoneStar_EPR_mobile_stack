@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,7 +16,7 @@ import { showMessage } from 'react-native-flash-message';
 import { AdminHeader } from '@/components/admin-header';
 import { Button, Switch, Text, View } from '@/components/ui';
 import { Plus } from '@/components/ui/icons';
-import { fetchRouteById, upsertRoute } from '@/lib/api/admin/routes';
+import { deleteRoute, fetchRouteById, upsertRoute } from '@/lib/api/admin/routes';
 
 type StopDraft = { key: string; venue_name: string; address: string };
 
@@ -201,6 +202,45 @@ function RouteStopsCard({
   );
 }
 
+function DeleteRouteButton({ routeId, routeName }: { routeId: string; routeName: string }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteRoute(routeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-routes'] });
+      showMessage({ message: 'Route deleted', type: 'success' });
+      router.back();
+    },
+    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
+  });
+
+  function confirmDelete() {
+    Alert.alert(
+      'Delete Route',
+      `Remove "${routeName || 'this route'}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
+      ],
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={confirmDelete}
+      disabled={deleteMutation.isPending}
+      activeOpacity={0.7}
+      className="mt-3 items-center rounded-xl border border-red-200 bg-red-50 py-3 dark:border-red-900/40 dark:bg-red-950/30"
+    >
+      <Text className="text-sm font-semibold text-red-600 dark:text-red-400">
+        {deleteMutation.isPending ? 'Deleting…' : 'Delete Route'}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function RouteFormEditor({
   routeId,
   isEdit,
@@ -291,6 +331,9 @@ function RouteFormEditor({
           onPress={() => mutation.mutate()}
           disabled={mutation.isPending}
         />
+        {isEdit && routeId && (
+          <DeleteRouteButton routeId={routeId} routeName={name.trim()} />
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );

@@ -46,7 +46,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
                   accessibilityLabel="Open driver details"
                 >
                   <InfoCard
-                    icon={<Truck color="#737373" width={16} height={16} />}
+                    icon={<Truck color="#9A7B45" width={16} height={16} />}
                     label="Driver"
                     value={campaign.driver_profile?.display_name ?? 'Unassigned'}
                   />
@@ -54,7 +54,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
               )
             : (
                 <InfoCard
-                  icon={<Truck color="#737373" width={16} height={16} />}
+                  icon={<Truck color="#9A7B45" width={16} height={16} />}
                   label="Driver"
                   value={campaign.driver_profile?.display_name ?? 'Unassigned'}
                 />
@@ -63,7 +63,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
       </View>
 
       {campaign.routes?.name && (
-        <InfoCard icon={<MapPin color="#737373" width={16} height={16} />} label="Route" value={campaign.routes.name} />
+        <InfoCard icon={<MapPin color="#9A7B45" width={16} height={16} />} label="Route" value={campaign.routes.name} />
       )}
 
       {campaign.campaign_costs && campaign.campaign_costs.length > 0 && (
