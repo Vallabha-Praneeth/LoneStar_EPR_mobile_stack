@@ -1,3 +1,4 @@
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
@@ -8,12 +9,21 @@ import { Text, View } from '@/components/ui';
 import { Camera, ChevronLeft } from '@/components/ui/icons';
 import { motionTokens } from '@/lib/motion/tokens';
 
-export function UploadSuccessScreen() {
+export function UploadSuccessScreen({ photoUri }: { photoUri?: string }) {
   const router = useRouter();
 
   return (
     <View className="flex-1 items-center justify-center bg-neutral-50 p-6 dark:bg-neutral-900">
       <View className="w-full items-center gap-5 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
+        {photoUri
+          ? (
+              <ExpoImage
+                source={{ uri: photoUri }}
+                style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 12, marginBottom: 8 }}
+                contentFit="cover"
+              />
+            )
+          : null}
         <UploadSuccessAnimation
           source={lottieAssets.uploadSuccess}
         />

@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Device from 'expo-device';
+import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
 import {
-  Image,
   Platform,
   ScrollView,
   TextInput,
@@ -77,11 +77,10 @@ function PhotoPickerArea({ onCamera, onGallery }: { onCamera: () => void; onGall
 function PhotoPreview({ uri, onClear }: { uri: string; onClear: () => void }) {
   return (
     <View className="relative overflow-hidden rounded-xl">
-      <Image
+      <ExpoImage
         source={{ uri }}
-        className="w-full"
-        style={{ aspectRatio: 4 / 3 }}
-        resizeMode="cover"
+        style={{ width: '100%', aspectRatio: 4 / 3 }}
+        contentFit="cover"
       />
       <TouchableOpacity
         onPress={onClear}
@@ -157,7 +156,7 @@ export function UploadScreen() {
             });
           });
       }
-      router.replace('/(app)/upload-success');
+      router.replace({ pathname: '/(app)/upload-success', params: { uri: imageUri! } });
     },
     onError: (err: Error) =>
       showMessage({ message: err.message, type: 'danger' }),
