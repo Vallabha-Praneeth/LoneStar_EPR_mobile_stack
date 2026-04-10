@@ -7,7 +7,14 @@ export type DriverCampaignData = {
   routes: { name: string } | null;
   status: 'draft' | 'pending' | 'active' | 'completed';
   driver_shifts: { id: string; started_at: string; ended_at: string | null }[];
-  campaign_photos: { id: string; submitted_at: string }[];
+  campaign_photos: { id: string; submitted_at: string; storage_path: string | null }[];
+};
+
+export type PastCampaignRow = {
+  id: string;
+  title: string;
+  campaign_date: string;
+  status: string;
 };
 
 export async function fetchDriverCampaign(driverId: string): Promise<DriverCampaignData | null> {
@@ -15,7 +22,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, title, campaign_date, routes ( name ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at )',
+      'id, title, campaign_date, routes ( name ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at, storage_path )',
     )
     .eq('driver_profile_id', driverId)
     .gte('campaign_date', today)
@@ -46,6 +53,29 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
     driver_shifts: (raw.driver_shifts ?? []) as DriverCampaignData['driver_shifts'],
     campaign_photos: (raw.campaign_photos ?? []) as DriverCampaignData['campaign_photos'],
   };
+}
+
+export async function getPhotoSignedUrl(storagePath: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from('campaign-photos')
+    .createSignedUrl(storagePath, 3600);
+  if (error)
+    return null;
+  return data.signedUrl;
+}
+
+export async function fetchDriverPastCampaigns(driverId: string): Promise<PastCampaignRow[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('campaigns')
+    .select('id, title, campaign_date, status')
+    .eq('driver_profile_id', driverId)
+    .lt('campaign_date', today)
+    .order('campaign_date', { ascending: false })
+    .limit(20);
+  if (error)
+    throw error;
+  return data ?? [];
 }
 
 export async function startShift(campaignId: string, driverId: string): Promise<void> {
