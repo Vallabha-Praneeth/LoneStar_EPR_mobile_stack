@@ -1,11 +1,14 @@
 import { useForm } from '@tanstack/react-form';
+import { MotiView } from 'moti';
 import * as React from 'react';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { z } from 'zod';
 
 import { AppLogo } from '@/components/app-logo';
+import { LoginCharacterAnimation } from '@/components/motion';
 import { Button, Input, Text, View } from '@/components/ui';
+import { motionTokens } from '@/lib/motion/tokens';
 
 export type FormType = {
   username: string;
@@ -22,6 +25,7 @@ export type LoginFormProps = {
 // arguments, disable secure entry so Maestro can type the password normally.
 // In all other builds (including dev) the field is always secure.
 const isE2E = LaunchArguments.value<{ isE2E?: string }>().isE2E === 'true';
+const allowPlaintextPasswordInDevAndroid = __DEV__ && Platform.OS === 'android';
 
 const usernameSchema = z.string().min(1, 'Username or email is required');
 const passwordSchema = z.string().min(1, 'Password is required');
@@ -40,78 +44,97 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior="padding"
-      keyboardVerticalOffset={10}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
     >
       <View className="flex-1 justify-center p-6">
-        <View className="mb-8 items-center justify-center">
+        <MotiView
+          from={{ scale: 0.75, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={motionTokens.spring.lively}
+          className="mb-8 items-center justify-center"
+        >
+          <LoginCharacterAnimation width={240} height={160} />
           <AppLogo size="lg" showText={false} />
-          <Text testID="form-title" className="mt-4 pb-1 text-center text-3xl font-bold tracking-tight">
-            AdTruck
-          </Text>
-          <Text className="text-center text-sm text-neutral-500">
-            Sign in to continue
-          </Text>
-        </View>
+          <MotiView
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: motionTokens.duration.base, delay: motionTokens.duration.fast }}
+          >
+            <Text testID="form-title" className="mt-4 pb-1 text-center text-3xl font-bold tracking-tight">
+              AdTruck
+            </Text>
+            <Text className="text-center text-sm text-neutral-500">
+              Sign in to continue
+            </Text>
+          </MotiView>
+        </MotiView>
 
-        <form.Field
-          name="username"
-          validators={{
-            onChange: usernameSchema,
-          }}
+        <MotiView
+          from={{ opacity: 0, translateY: 24 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: motionTokens.duration.base, delay: motionTokens.duration.base }}
         >
-          {field => (
-            <Input
-              testID="username-input"
-              label="Username or Email"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={field.state.value}
-              onChangeText={text => field.handleChange(text)}
-              onBlur={field.handleBlur}
-              error={field.state.meta.errors.length > 0 ? String((field.state.meta.errors[0] as any)?.message ?? field.state.meta.errors[0]) : undefined}
-            />
-          )}
-        </form.Field>
 
-        <form.Field
-          name="password"
-          validators={{
-            onChange: passwordSchema,
-          }}
-        >
-          {field => (
-            <Input
-              testID="password-input"
-              label="Password"
-              placeholder="••••••••"
-              secureTextEntry={!isE2E}
-              value={field.state.value}
-              onChangeText={text => field.handleChange(text)}
-              onBlur={field.handleBlur}
-              error={field.state.meta.errors.length > 0 ? String((field.state.meta.errors[0] as any)?.message ?? field.state.meta.errors[0]) : undefined}
-            />
-          )}
-        </form.Field>
+          <form.Field
+            name="username"
+            validators={{
+              onChange: usernameSchema,
+            }}
+          >
+            {field => (
+              <Input
+                testID="username-input"
+                label="Username or Email"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={field.state.value}
+                onChangeText={text => field.handleChange(text)}
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors.length > 0 ? String((field.state.meta.errors[0] as any)?.message ?? field.state.meta.errors[0]) : undefined}
+              />
+            )}
+          </form.Field>
 
-        {error
-          ? (
-              <View className="mb-2 rounded-xl bg-danger-500/10 px-4 py-3">
-                <Text className="text-center text-sm font-medium text-danger-500 dark:text-danger-400">{error}</Text>
-              </View>
-            )
-          : null}
+          <form.Field
+            name="password"
+            validators={{
+              onChange: passwordSchema,
+            }}
+          >
+            {field => (
+              <Input
+                testID="password-input"
+                label="Password"
+                placeholder="••••••••"
+                secureTextEntry={!isE2E && !allowPlaintextPasswordInDevAndroid}
+                value={field.state.value}
+                onChangeText={text => field.handleChange(text)}
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors.length > 0 ? String((field.state.meta.errors[0] as any)?.message ?? field.state.meta.errors[0]) : undefined}
+              />
+            )}
+          </form.Field>
 
-        <form.Subscribe selector={state => [state.isSubmitting]}>
-          {([isSubmitting]) => (
-            <Button
-              testID="login-button"
-              label="Sign In"
-              onPress={form.handleSubmit}
-              loading={isSubmitting}
-            />
-          )}
-        </form.Subscribe>
+          {error
+            ? (
+                <View className="mb-2 rounded-xl bg-danger-500/10 px-4 py-3">
+                  <Text className="text-center text-sm font-medium text-danger-500 dark:text-danger-400">{error}</Text>
+                </View>
+              )
+            : null}
+
+          <form.Subscribe selector={state => [state.isSubmitting]}>
+            {([isSubmitting]) => (
+              <Button
+                testID="login-button"
+                label="Sign In"
+                onPress={form.handleSubmit}
+                loading={isSubmitting}
+              />
+            )}
+          </form.Subscribe>
+        </MotiView>
       </View>
     </KeyboardAvoidingView>
   );

@@ -4,6 +4,7 @@ const { withUniwindConfig } = require('uniwind/metro');
 const config = getDefaultConfig(__dirname);
 
 config.resolver.assetExts.push('lottie');
+config.resolver.assetExts.push('riv');
 
 module.exports = withUniwindConfig(config, {
   cssEntryFile: './src/global.css',

@@ -4,7 +4,7 @@ import { MotiView } from 'moti';
 import * as React from 'react';
 import { TouchableOpacity } from 'react-native';
 
-import { lottieAssets, UploadSuccessAnimation } from '@/components/motion';
+import { CheckmarkAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, ChevronLeft } from '@/components/ui/icons';
 import { motionTokens } from '@/lib/motion/tokens';
@@ -24,9 +24,7 @@ export function UploadSuccessScreen({ photoUri }: { photoUri?: string }) {
               />
             )
           : null}
-        <UploadSuccessAnimation
-          source={lottieAssets.uploadSuccess}
-        />
+        <CheckmarkAnimation size={100} />
 
         <MotiView
           from={{ opacity: 0, translateY: 6 }}

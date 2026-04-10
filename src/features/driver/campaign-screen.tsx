@@ -9,8 +9,9 @@ import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
+import { TruckAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
-import { Camera, CaretDown, Clipboard, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
+import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import {
   endShift,
@@ -80,14 +81,7 @@ function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
           transition={motionTokens.spring.gentle}
           className="w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800"
         >
-          <MotiView
-            from={{ scale: 1 }}
-            animate={{ scale: 1.08 }}
-            transition={{ type: 'timing', duration: 1200, loop: true, repeatReverse: true }}
-            className="size-14 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-700"
-          >
-            <Clipboard color="#a3a3a3" width={28} height={28} />
-          </MotiView>
+          <TruckAnimation size={180} />
           <Text className="text-center text-sm font-medium text-neutral-500">
             No active campaign assigned to you today.
           </Text>
