@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 
 import {
-  ActivityIndicator,
   FlatList,
   TouchableOpacity,
 } from 'react-native';
@@ -12,7 +11,7 @@ import { showMessage } from 'react-native-flash-message';
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { emptyStatePresets, lottieAssets } from '@/components/motion';
+import { emptyStatePresets, ListPaginationAnimation, lottieAssets } from '@/components/motion';
 import { SearchBar } from '@/components/search-bar';
 import { Switch, Text, View } from '@/components/ui';
 import { ArrowRight, MapPin, Plus } from '@/components/ui/icons';
@@ -130,7 +129,7 @@ export function RoutesScreen() {
 
       {isLoading && (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" />
+          <ListPaginationAnimation size={100} />
         </View>
       )}
 

@@ -4,11 +4,11 @@ import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 
-import { ActivityIndicator, FlatList, TouchableOpacity } from 'react-native';
+import { FlatList, TouchableOpacity } from 'react-native';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { emptyStatePresets, lottieAssets } from '@/components/motion';
+import { emptyStatePresets, ListPaginationAnimation, lottieAssets, StatusIconAnimation } from '@/components/motion';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
@@ -125,7 +125,8 @@ export function CampaignListScreen() {
       </View>
 
       <View className="px-4 pt-3">
-        <View className="mb-1">
+        <View className="mb-1 flex-row items-center gap-2">
+          <StatusIconAnimation size={18} />
           <Text className="text-xs text-neutral-400">
             {campaigns.length}
             {' '}
@@ -141,7 +142,7 @@ export function CampaignListScreen() {
       {isLoading
         ? (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" />
+              <ListPaginationAnimation size={100} />
             </View>
           )
         : (

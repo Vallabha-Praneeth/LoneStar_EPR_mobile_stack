@@ -3,7 +3,7 @@ import { TouchableOpacity } from 'react-native';
 
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { emptyStatePresets, lottieAssets } from '@/components/motion';
+import { emptyStatePresets, lottieAssets, PhotoGalleryHoverAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, Clock, LogOut } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
@@ -38,6 +38,7 @@ export function ClientLandingScreen() {
       <View className="flex-1 items-center justify-center p-6">
         <View className="w-full items-center gap-5 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800">
           <Text className="text-lg font-semibold">Campaign Reports</Text>
+          <PhotoGalleryHoverAnimation width={200} height={110} />
           <EmptyStateWithAnimation
             source={lottieAssets.clientEmptyBox}
             message="View your campaign photos, timing sheets, and PDF reports on the web portal."

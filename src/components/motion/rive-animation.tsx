@@ -122,3 +122,147 @@ export function JuiceAnimation({ size = 32 }: { size?: number }) {
     />
   );
 }
+
+// ─── Admin Animations ────────────────────────────────────────────
+
+/** Dashboard hero — analytics screen header graphic */
+export function DashboardHeroAnimation({ width = 280, height = 140 }: { width?: number; height?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/dashboard-hero.riv')}
+      width={width}
+      height={height}
+      fit={Fit.Contain}
+      autoplay
+      testID="dashboard-hero-animation"
+    />
+  );
+}
+
+/** Campaign progress bar — campaign detail screen */
+export function CampaignProgressAnimation({ width = 220, height = 60 }: { width?: number; height?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/campaign-progress.riv')}
+      width={width}
+      height={height}
+      fit={Fit.Contain}
+      autoplay
+      testID="campaign-progress-animation"
+    />
+  );
+}
+
+/** Campaign milestone celebration — completed campaigns */
+export function CampaignMilestoneAnimation({ size = 100 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/campaign-milestone.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="campaign-milestone-animation"
+    />
+  );
+}
+
+/** Approve/unlock — photo approval area */
+export function ApproveUnlockAnimation({ size = 48 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/approve-unlock.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="approve-unlock-animation"
+    />
+  );
+}
+
+/** Campaign created — success state after creating a campaign */
+export function CampaignCreatedAnimation({ size = 28 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/campaign-created.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="campaign-created-animation"
+    />
+  );
+}
+
+/** Status icon — animated status indicator */
+export function StatusIconAnimation({ size = 20 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/status-icon.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="status-icon-animation"
+    />
+  );
+}
+
+/** Budget indicator — financial/cost visualisation */
+export function BudgetIndicatorAnimation({ width = 200, height = 80 }: { width?: number; height?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/budget-indicator.riv')}
+      width={width}
+      height={height}
+      fit={Fit.Contain}
+      autoplay
+      testID="budget-indicator-animation"
+    />
+  );
+}
+
+/** Icon set — decorative admin icon pack */
+export function IconSetAnimation({ size = 36 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/icon-set.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="icon-set-animation"
+    />
+  );
+}
+
+/** List pagination — animated list loading state */
+export function ListPaginationAnimation({ size = 80 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/list-pagination.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="list-pagination-animation"
+    />
+  );
+}
+
+// ─── Client Animations ───────────────────────────────────────────
+
+/** Photo gallery hover — client landing photo section */
+export function PhotoGalleryHoverAnimation({ width = 200, height = 120 }: { width?: number; height?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/photo-gallery-hover.riv')}
+      width={width}
+      height={height}
+      fit={Fit.Contain}
+      autoplay
+      testID="photo-gallery-hover-animation"
+    />
+  );
+}

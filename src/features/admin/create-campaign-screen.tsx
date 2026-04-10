@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
+import { CampaignCreatedAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { createCampaign } from '@/lib/api/admin/campaigns';
@@ -253,7 +254,7 @@ export function CreateCampaignScreen() {
               className="rounded-lg bg-primary px-4 py-1.5 disabled:opacity-50"
             >
               {mutation.isPending
-                ? <ActivityIndicator size="small" color="#fff" />
+                ? <CampaignCreatedAnimation size={22} />
                 : <Text className="text-sm font-semibold text-white">Save</Text>}
             </TouchableOpacity>
           </View>

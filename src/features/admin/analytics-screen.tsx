@@ -3,11 +3,11 @@ import type { AnalyticsFilters, AnalyticsRange, AnalyticsSummary, CampaignStatus
 import { useQuery } from '@tanstack/react-query';
 
 import * as React from 'react';
-import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { emptyStatePresets, lottieAssets } from '@/components/motion';
+import { DashboardHeroAnimation, emptyStatePresets, ListPaginationAnimation, lottieAssets } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Card } from '@/components/ui/card';
 import { HorizontalBarChart } from '@/components/ui/horizontal-bar-chart';
@@ -292,7 +292,7 @@ function DataContent({ paddingBottom, isLoading, isError, summary, clientBars, d
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" />
+        <ListPaginationAnimation size={100} />
       </View>
     );
   }
@@ -307,6 +307,9 @@ function DataContent({ paddingBottom, isLoading, isError, summary, clientBars, d
   }
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom }} showsVerticalScrollIndicator={false}>
+      <View className="mb-4 items-center">
+        <DashboardHeroAnimation width={280} height={130} />
+      </View>
       {summary && <KpiGrid summary={summary} />}
       {clientBars.length > 0 && (
         <SectionCard title="Top Clients by Revenue">

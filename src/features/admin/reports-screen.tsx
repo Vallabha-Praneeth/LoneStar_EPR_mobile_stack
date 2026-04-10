@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import * as React from 'react';
 
-import { ActivityIndicator, FlatList } from 'react-native';
+import { FlatList } from 'react-native';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { emptyStatePresets, lottieAssets } from '@/components/motion';
+import { BudgetIndicatorAnimation, emptyStatePresets, lottieAssets } from '@/components/motion';
 import { SearchBar } from '@/components/search-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
@@ -124,7 +124,7 @@ export function ReportsScreen() {
       {isLoading
         ? (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" />
+              <BudgetIndicatorAnimation width={200} height={100} />
             </View>
           )
         : (

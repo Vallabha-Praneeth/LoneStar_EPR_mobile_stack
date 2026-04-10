@@ -8,11 +8,35 @@ import { ActivityIndicator, FlatList, Image, TouchableOpacity } from 'react-nati
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { InfoCard } from '@/components/info-card';
+import { ApproveUnlockAnimation, CampaignMilestoneAnimation, CampaignProgressAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
 import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
+
+function PhotosSectionHeader({ status, photoCount }: { status: string; photoCount: number }) {
+  return (
+    <>
+      <View className="mt-3 items-center">
+        <CampaignProgressAnimation width={240} height={56} />
+      </View>
+      {status === 'completed' && (
+        <View className="items-center">
+          <CampaignMilestoneAnimation size={90} />
+        </View>
+      )}
+      <View className="mt-2 flex-row items-center gap-2">
+        <ApproveUnlockAnimation size={24} />
+        <Text className="text-sm font-semibold">
+          Photos (
+          {photoCount}
+          )
+        </Text>
+      </View>
+    </>
+  );
+}
 
 function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
   const router = useRouter();
@@ -106,11 +130,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
         </Card>
       )}
 
-      <Text className="mt-2 text-sm font-semibold">
-        Photos (
-        {campaign.campaign_photos.length}
-        )
-      </Text>
+      <PhotosSectionHeader status={campaign.status} photoCount={campaign.campaign_photos.length} />
     </View>
   );
 }
