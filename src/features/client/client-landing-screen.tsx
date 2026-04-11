@@ -8,7 +8,7 @@ import { Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/app-logo';
-import { CampaignFillAnimation, SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { LottieAnimation, lottieAssets, SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, Clock, LogOut } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
@@ -38,7 +38,14 @@ function CampaignOpenOverlay({ visible }: { visible: boolean }) {
   return (
     <Modal transparent animationType="fade" visible={visible} statusBarTranslucent>
       <View className="flex-1 items-center justify-center bg-black/60">
-        <CampaignFillAnimation size={220} />
+        <LottieAnimation
+          source={lottieAssets.clientEmptyBox}
+
+          size={220}
+          loop={false}
+          autoPlay
+          speed={1.2}
+        />
       </View>
     </Modal>
   );
