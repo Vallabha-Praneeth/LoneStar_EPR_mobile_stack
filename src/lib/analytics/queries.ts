@@ -6,7 +6,7 @@ import type {
   DriverBreakdownRow,
 } from './types';
 
-import { format, subMonths, subYears } from 'date-fns';
+import { format, subDays, subMonths, subWeeks, subYears } from 'date-fns';
 
 /**
  * Analytics Supabase queries for mobile.
@@ -32,9 +32,27 @@ type RawCampaignRow = {
 
 function getDateRange(range: AnalyticsRange): { from: string; to: string } {
   const to = new Date();
-  const from = range === '1y'
-    ? subYears(to, 1)
-    : subMonths(to, range === '3m' ? 3 : 6);
+  let from: Date;
+  switch (range) {
+    case '1d':
+      from = subDays(to, 1);
+      break;
+    case '1w':
+      from = subWeeks(to, 1);
+      break;
+    case '1m':
+      from = subMonths(to, 1);
+      break;
+    case '3m':
+      from = subMonths(to, 3);
+      break;
+    case '6m':
+      from = subMonths(to, 6);
+      break;
+    case '1y':
+      from = subYears(to, 1);
+      break;
+  }
   return {
     from: format(from, 'yyyy-MM-dd'),
     to: format(to, 'yyyy-MM-dd'),

@@ -27,6 +27,9 @@ import { fetchClients, fetchDrivers } from '@/lib/api/admin/selectors';
 // ─── Range Picker ────────────────────────────────────────────────
 
 const RANGES: { value: AnalyticsRange; label: string }[] = [
+  { value: '1d', label: '1D' },
+  { value: '1w', label: '1W' },
+  { value: '1m', label: '1M' },
   { value: '3m', label: '3M' },
   { value: '6m', label: '6M' },
   { value: '1y', label: '1Y' },
@@ -332,7 +335,7 @@ function DataContent({ paddingBottom, isLoading, isError, summary, clientBars, d
 
 export function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
-  const [range, setRange] = React.useState<AnalyticsRange>('3m');
+  const [range, setRange] = React.useState<AnalyticsRange>('1m');
   const [clientId, setClientId] = React.useState<string | undefined>();
   const [driverId, setDriverId] = React.useState<string | undefined>();
   const [status, setStatus] = React.useState<CampaignStatus | undefined>();

@@ -6,6 +6,7 @@ import { I18nManager, Text as NNText, StyleSheet } from 'react-native';
 
 import { twMerge } from 'tailwind-merge';
 import { translate } from '@/lib/i18n';
+import { getInterFontFamily } from './text-font';
 
 type Props = {
   className?: string;
@@ -33,10 +34,11 @@ export function Text({
       StyleSheet.flatten([
         {
           writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr',
+          fontFamily: getInterFontFamily(textStyle),
         },
         style,
       ]) as TextStyle,
-    [style],
+    [style, textStyle],
   );
   return (
     <NNText className={textStyle} style={nStyle} {...props}>

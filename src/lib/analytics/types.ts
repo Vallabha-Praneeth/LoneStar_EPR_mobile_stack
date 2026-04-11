@@ -1,6 +1,6 @@
 /** Analytics domain types — mirrors web analytics contracts. */
 
-export type AnalyticsRange = '3m' | '6m' | '1y';
+export type AnalyticsRange = '1d' | '1w' | '1m' | '3m' | '6m' | '1y';
 
 export type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed';
 

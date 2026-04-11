@@ -9,7 +9,7 @@ import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
-import { TruckAnimation } from '@/components/motion';
+import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
@@ -382,7 +382,7 @@ export function CampaignScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-white dark:bg-black">
-        <ActivityIndicator size="large" />
+        <SpinnerAnimation size={64} />
       </View>
     );
   }

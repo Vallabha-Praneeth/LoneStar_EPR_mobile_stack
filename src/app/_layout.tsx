@@ -1,6 +1,8 @@
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
@@ -30,6 +32,17 @@ loadSelectedTheme();
 // SplashScreen.setOptions({ duration: 500, fade: true });
 
 export default function RootLayout() {
+  // Load Inter fonts in the background. SplashScreen is disabled for iOS 26 beta
+  // (hideAsync freezes permanently), so we never gate rendering on font load —
+  // the app renders immediately with system-font fallback and re-renders once
+  // Inter is ready. Never return null from a root layout in Expo Router.
+  useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
   return (
     <Providers>
       <Stack>

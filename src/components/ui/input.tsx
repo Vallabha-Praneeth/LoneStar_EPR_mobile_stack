@@ -6,6 +6,7 @@ import { tv } from 'tailwind-variants';
 
 import colors from './colors';
 import { Text } from './text';
+import { getInterFontFamily } from './text-font';
 
 const inputTv = tv({
   slots: {
@@ -93,6 +94,7 @@ export function Input({ ref, ...props }: NInputProps & { ref?: React.Ref<NTextIn
         style={StyleSheet.flatten([
           { writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr' },
           { textAlign: I18nManager.isRTL ? 'right' : 'left' },
+          { fontFamily: getInterFontFamily(styles.input()) },
           inputProps.style,
         ])}
       />
