@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Device from 'expo-device';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
 import {
@@ -162,6 +162,8 @@ export function UploadScreen() {
   const [note, setNote] = React.useState('');
   const { imageUri, setImageUri, handleCamera, handleGallery } = useImagePicker();
 
+  const { stopId, stopName } = useLocalSearchParams<{ stopId?: string; stopName?: string }>();
+
   const { data: campaign } = useQuery({
     queryKey: ['driver-campaign', profile?.id],
     queryFn: () => fetchDriverCampaign(profile!.id),
@@ -170,7 +172,13 @@ export function UploadScreen() {
 
   const uploadMutation = useMutation({
     mutationFn: () =>
-      uploadPhoto({ imageUri: imageUri!, campaignId: campaign!.id, driverId: profile!.id, note }),
+      uploadPhoto({
+        imageUri: imageUri!,
+        campaignId: campaign!.id,
+        driverId: profile!.id,
+        note,
+        stopId: stopId ?? undefined,
+      }),
     onSuccess: (photoId: string) => {
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
       if (!isE2E) {
@@ -202,7 +210,12 @@ export function UploadScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <ChevronLeft color="#737373" width={20} height={20} />
         </TouchableOpacity>
-        <Text className="text-base font-semibold">Upload Photo</Text>
+        <View className="flex-1">
+          <Text className="text-base font-semibold">Upload Photo</Text>
+          {stopName
+            ? <Text className="text-xs text-neutral-500" numberOfLines={1}>{`Stop: ${stopName}`}</Text>
+            : null}
+        </View>
       </MotiView>
       <ScrollView
         className="flex-1"
@@ -239,9 +252,7 @@ export function UploadScreen() {
             className="h-14 items-center justify-center rounded-xl bg-primary disabled:opacity-50"
           >
             {uploadMutation.isPending
-              ? (
-                  <JuiceAnimation size={36} />
-                )
+              ? <JuiceAnimation size={36} />
               : (
                   <View className="flex-row items-center gap-2">
                     <Upload color="#fff" width={18} height={18} />

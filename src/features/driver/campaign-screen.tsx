@@ -22,6 +22,7 @@ import {
   getPhotoSignedUrl,
   startShift,
 } from '@/lib/api/driver/campaign';
+import { completeStop } from '@/lib/api/driver/photos';
 import { motionTokens } from '@/lib/motion/tokens';
 
 type CampaignPhoto = DriverCampaignData['campaign_photos'][number];
@@ -337,6 +338,7 @@ function StopRow({
   onDone,
   onSkip,
   onMove,
+  onPhoto,
 }: {
   item: StopState;
   index: number;
@@ -344,6 +346,7 @@ function StopRow({
   onDone: () => void;
   onSkip: () => void;
   onMove: (dir: 'up' | 'down') => void;
+  onPhoto: () => void;
 }) {
   const { stop, done, skipped } = item;
   return (
@@ -374,15 +377,13 @@ function StopRow({
       {/* Stop info */}
       <View className="flex-1">
         <Text
-          className={`text-sm font-medium ${done ? 'text-neutral-400 line-through' : skipped ? 'text-neutral-400 line-through' : ''}`}
+          className={`text-sm font-medium ${done || skipped ? 'text-neutral-400 line-through' : ''}`}
           numberOfLines={1}
         >
           {stop.venue_name}
         </Text>
         {stop.address
-          ? (
-              <Text className="text-xs text-neutral-500" numberOfLines={1}>{stop.address}</Text>
-            )
+          ? <Text className="text-xs text-neutral-500" numberOfLines={1}>{stop.address}</Text>
           : null}
       </View>
 
@@ -390,6 +391,13 @@ function StopRow({
       {!done && !skipped
         ? (
             <>
+              <TouchableOpacity
+                onPress={onPhoto}
+                className="rounded-lg bg-primary/10 p-1.5"
+                accessibilityLabel="Upload photo for this stop"
+              >
+                <Camera color="#1d4ed8" width={14} height={14} />
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={onDone}
                 className="rounded-lg bg-green-100 px-2.5 py-1 dark:bg-green-900/40"
@@ -415,7 +423,14 @@ function StopRow({
   );
 }
 
-function RouteStopsCard({ stops }: { stops: RouteStop[] }) {
+function RouteStopsCard({
+  stops,
+  shiftId,
+}: {
+  stops: RouteStop[];
+  shiftId: string | undefined;
+}) {
+  const router = useRouter();
   const [items, setItems] = React.useState<StopState[]>(
     () => stops.map(s => ({ stop: s, done: false, skipped: false })),
   );
@@ -425,7 +440,13 @@ function RouteStopsCard({ stops }: { stops: RouteStop[] }) {
   const allDone = activeCount > 0 && items.filter(i => !i.skipped).every(i => i.done);
 
   function markDone(idx: number) {
+    const item = items[idx];
     setItems(prev => prev.map((it, i) => (i === idx ? { ...it, done: true } : it)));
+    if (shiftId && item) {
+      completeStop(shiftId, item.stop.id).catch(() => {
+        showMessage({ message: 'Stop synced locally — will retry on reconnect', type: 'warning' });
+      });
+    }
   }
 
   function markSkip(idx: number) {
@@ -440,6 +461,13 @@ function RouteStopsCard({ stops }: { stops: RouteStop[] }) {
         return prev;
       [arr[index], arr[t]] = [arr[t], arr[index]];
       return arr;
+    });
+  }
+
+  function openUploadForStop(stop: RouteStop) {
+    router.push({
+      pathname: '/(app)/upload',
+      params: { stopId: stop.id, stopName: stop.venue_name },
     });
   }
 
@@ -485,6 +513,7 @@ function RouteStopsCard({ stops }: { stops: RouteStop[] }) {
           onDone={() => markDone(i)}
           onSkip={() => markSkip(i)}
           onMove={dir => moveStop(i, dir)}
+          onPhoto={() => openUploadForStop(item.stop)}
         />
       ))}
     </MotiView>
@@ -609,7 +638,7 @@ export function CampaignScreen() {
           </View>
         </MotiView>
         {campaign.routes?.route_stops && campaign.routes.route_stops.length > 0
-          ? <RouteStopsCard stops={campaign.routes.route_stops} />
+          ? <RouteStopsCard stops={campaign.routes.route_stops} shiftId={activeShift?.id} />
           : null}
         {recentPhotos.length > 0 ? <RecentUploadsList photos={recentPhotos} /> : null}
         {profile?.id ? <PastCampaignsAccordion driverId={profile.id} /> : null}

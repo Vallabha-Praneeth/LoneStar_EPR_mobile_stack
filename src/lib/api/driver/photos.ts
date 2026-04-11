@@ -9,6 +9,8 @@ type UploadPhotoOptions = {
   campaignId: string;
   driverId: string;
   note: string;
+  /** When set, photo is stored under campaigns/{id}/stops/{stopId}/ and linked in DB */
+  stopId?: string;
 };
 
 export async function uploadPhoto({
@@ -16,8 +18,8 @@ export async function uploadPhoto({
   campaignId,
   driverId,
   note,
+  stopId,
 }: UploadPhotoOptions): Promise<string> {
-  // Validate file size before uploading
   const response = await fetch(imageUri);
   const blob = await response.blob();
 
@@ -25,11 +27,13 @@ export async function uploadPhoto({
     throw new Error('File size must be under 15 MB.');
   }
 
-  // ArrayBuffer is the correct upload pattern for React Native
   const arrayBuffer = await new Response(blob).arrayBuffer();
-
   const photoId = Crypto.randomUUID();
-  const storagePath = `campaigns/${campaignId}/photos/${photoId}/original.jpg`;
+
+  // Organise storage by stop when context is available, else flat photos folder
+  const storagePath = stopId
+    ? `campaigns/${campaignId}/stops/${stopId}/${photoId}.jpg`
+    : `campaigns/${campaignId}/photos/${photoId}/original.jpg`;
 
   const { error: uploadError } = await supabase.storage
     .from('campaign-photos')
@@ -49,13 +53,31 @@ export async function uploadPhoto({
     note: note.trim() || null,
     submitted_at: new Date().toISOString(),
     captured_at: new Date().toISOString(),
+    // Linked to stop — requires migration 008_stop_photo_organisation.sql
+    ...(stopId ? { route_stop_id: stopId } : {}),
   });
 
   if (insertError) {
-    // Orphan cleanup — remove storage object if DB insert fails
     await supabase.storage.from('campaign-photos').remove([storagePath]);
     throw insertError;
   }
 
   return photoId;
+}
+
+/**
+ * Records a driver marking a stop as done during a shift.
+ * Requires migration 008_stop_photo_organisation.sql (shift_stop_completions table).
+ * Silently ignores duplicate completions (UNIQUE constraint).
+ */
+export async function completeStop(shiftId: string, stopId: string): Promise<void> {
+  const { error } = await supabase
+    .from('shift_stop_completions')
+    .insert({ shift_id: shiftId, stop_id: stopId })
+    .select()
+    .maybeSingle();
+
+  // Ignore unique-constraint violation (already completed) gracefully
+  if (error && error.code !== '23505')
+    throw error;
 }
