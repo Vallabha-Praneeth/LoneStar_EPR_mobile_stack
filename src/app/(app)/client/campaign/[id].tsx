@@ -7,8 +7,9 @@ import { MotiView } from 'moti';
 import * as React from 'react';
 import { ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SpinnerAnimation } from '@/components/motion';
 
+import { CampaignStageProgress } from '@/components/campaign-stage-progress';
+import { SpinnerAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { ChevronLeft } from '@/components/ui/icons';
@@ -108,6 +109,13 @@ export default function CampaignPhotosScreen() {
           {campaign && <StatusBadge status={campaign.status} />}
         </View>
       </MotiView>
+
+      {/* Stage progress */}
+      {campaign && (
+        <View className="border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800">
+          <CampaignStageProgress status={campaign.status} />
+        </View>
+      )}
 
       {/* Loading */}
       {photosQ.isLoading && (

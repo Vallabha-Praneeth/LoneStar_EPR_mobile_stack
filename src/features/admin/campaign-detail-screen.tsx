@@ -7,8 +7,9 @@ import { ActivityIndicator, FlatList, Image, TouchableOpacity } from 'react-nati
 
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
+import { CampaignStageProgress } from '@/components/campaign-stage-progress';
 import { InfoCard } from '@/components/info-card';
-import { ApproveUnlockAnimation, CampaignMilestoneAnimation, CampaignProgressAnimation } from '@/components/motion';
+import { ApproveUnlockAnimation, CampaignMilestoneAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
 import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
@@ -18,15 +19,15 @@ import { getSignedUrl } from '@/lib/api/admin/photos';
 function PhotosSectionHeader({ status, photoCount }: { status: string; photoCount: number }) {
   return (
     <>
-      <View className="mt-3 items-center">
-        <CampaignProgressAnimation width={240} height={56} />
+      <View className="mt-3">
+        <CampaignStageProgress status={status} />
       </View>
       {status === 'completed' && (
-        <View className="items-center">
+        <View className="mt-2 items-center">
           <CampaignMilestoneAnimation size={90} />
         </View>
       )}
-      <View className="mt-2 flex-row items-center gap-2">
+      <View className="mt-3 flex-row items-center gap-2">
         <ApproveUnlockAnimation size={24} />
         <Text className="text-sm font-semibold">
           Photos (
