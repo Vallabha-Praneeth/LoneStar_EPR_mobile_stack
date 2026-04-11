@@ -280,3 +280,17 @@ export function CampaignFillAnimation({ size = 180 }: { size?: number }) {
     />
   );
 }
+
+/** Welcome character — client landing hero greeting */
+export function WelcomeCharacterAnimation({ size = 120 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/welcome-character.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="welcome-character-animation"
+    />
+  );
+}

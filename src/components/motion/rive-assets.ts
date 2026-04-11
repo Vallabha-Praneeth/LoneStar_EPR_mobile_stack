@@ -22,6 +22,7 @@ export const riveAssets = {
   // Client
   photoGalleryHover: require('../../../assets/animations/photo-gallery-hover.riv'),
   campaignFill: require('../../../assets/animations/campaign-fill.riv'),
+  welcomeCharacter: require('../../../assets/animations/welcome-character.riv'),
 } as const;
 
 export type RiveAssetKey = keyof typeof riveAssets;
