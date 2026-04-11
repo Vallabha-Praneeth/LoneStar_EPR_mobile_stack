@@ -9,29 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/app-logo';
 import { LottieAnimation, lottieAssets, SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { Camera, Clock, LogOut } from '@/components/ui/icons';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchClientCampaigns } from '@/lib/api/client/campaigns';
 import { motionTokens } from '@/lib/motion/tokens';
-
-// ─── Status badge ─────────────────────────────────────────────────
-
-const STATUS_STYLES: Record<ClientCampaignRow['status'], string> = {
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-neutral-100 text-neutral-600',
-  pending: 'bg-blue-100 text-blue-700',
-  draft: 'bg-amber-100 text-amber-700',
-};
-
-function StatusBadge({ status }: { status: ClientCampaignRow['status'] }) {
-  return (
-    <View className={`rounded-full px-2.5 py-1 ${STATUS_STYLES[status]}`}>
-      <Text className="text-xs font-medium capitalize">{status}</Text>
-    </View>
-  );
-}
 
 // ─── Box-opening overlay ──────────────────────────────────────────
 

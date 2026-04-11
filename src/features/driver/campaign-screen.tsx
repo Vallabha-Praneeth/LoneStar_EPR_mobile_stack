@@ -10,6 +10,7 @@ import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
 import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -35,16 +36,6 @@ function PhotoThumbnail({ storagePath }: { storagePath: string | null }) {
   if (!uri)
     return <View className="size-10 rounded-lg bg-neutral-100 dark:bg-neutral-700" />;
   return <ExpoImage source={{ uri }} style={{ width: 40, height: 40, borderRadius: 8 }} contentFit="cover" />;
-}
-
-function getStatusColor(activeShift: boolean, status: string): string {
-  if (activeShift) {
-    return 'bg-green-100 text-green-700';
-  }
-  if (status === 'completed') {
-    return 'bg-neutral-100 text-neutral-600';
-  }
-  return 'bg-blue-100 text-blue-700';
 }
 
 function CampaignHeader({ right }: { right: React.ReactNode }) {
@@ -252,8 +243,8 @@ function RecentUploadsList({ photos }: { photos: CampaignPhoto[] }) {
               {format(new Date(photo.submitted_at), 'h:mm a')}
             </Text>
           </View>
-          <View className="rounded-full bg-green-100 px-2 py-1">
-            <Text className="text-xs font-medium text-green-700">
+          <View className="rounded-full bg-green-100 px-2 py-1 dark:bg-green-900/40">
+            <Text className="text-xs font-medium text-green-700 dark:text-green-300">
               Uploaded
             </Text>
           </View>
@@ -395,8 +386,6 @@ export function CampaignScreen() {
     return <EmptyCampaignState onSignOut={signOut} />;
   }
 
-  const statusColor = getStatusColor(!!activeShift, campaign.status);
-
   return (
     <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
@@ -406,11 +395,8 @@ export function CampaignScreen() {
               from={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={motionTokens.spring.lively}
-              className={`rounded-full px-2.5 py-1 ${statusColor}`}
             >
-              <Text className="text-xs font-medium capitalize">
-                {activeShift ? 'Active' : campaign.status}
-              </Text>
+              <StatusBadge status={activeShift ? 'active' : campaign.status} />
             </MotiView>
             <ThemeToggle />
             <TouchableOpacity
