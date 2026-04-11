@@ -5,6 +5,7 @@ export default function ClientLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="timing" />
+      <Stack.Screen name="campaign/[id]" />
     </Stack>
   );
 }

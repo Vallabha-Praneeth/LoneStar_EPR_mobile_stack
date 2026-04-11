@@ -266,3 +266,17 @@ export function PhotoGalleryHoverAnimation({ width = 200, height = 120 }: { widt
     />
   );
 }
+
+/** Campaign fill / box-opening — transition animation when a client taps a campaign */
+export function CampaignFillAnimation({ size = 180 }: { size?: number }) {
+  return (
+    <RiveAnimation
+      source={require('../../../assets/animations/campaign-fill.riv')}
+      width={size}
+      height={size}
+      fit={Fit.Contain}
+      autoplay
+      testID="campaign-fill-animation"
+    />
+  );
+}

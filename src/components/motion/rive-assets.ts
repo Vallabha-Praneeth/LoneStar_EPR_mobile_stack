@@ -21,6 +21,7 @@ export const riveAssets = {
   listPagination: require('../../../assets/animations/list-pagination.riv'),
   // Client
   photoGalleryHover: require('../../../assets/animations/photo-gallery-hover.riv'),
+  campaignFill: require('../../../assets/animations/campaign-fill.riv'),
 } as const;
 
 export type RiveAssetKey = keyof typeof riveAssets;

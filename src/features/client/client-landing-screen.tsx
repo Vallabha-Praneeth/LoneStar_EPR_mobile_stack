@@ -1,23 +1,18 @@
-import type { ClientCampaignRow, ClientPhotoRow } from '@/lib/api/client/campaigns';
+import type { ClientCampaignRow } from '@/lib/api/client/campaigns';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
-import { ScrollView, TouchableOpacity } from 'react-native';
+import { Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/app-logo';
-import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { CampaignFillAnimation, SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
-import { Camera, CaretDown, Clock, LogOut } from '@/components/ui/icons';
+import { Camera, Clock, LogOut } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
-import {
-  fetchClientCampaignPhotos,
-  fetchClientCampaigns,
-  getClientPhotoSignedUrl,
-} from '@/lib/api/client/campaigns';
+import { fetchClientCampaigns } from '@/lib/api/client/campaigns';
 import { motionTokens } from '@/lib/motion/tokens';
 
 // ─── Status badge ─────────────────────────────────────────────────
@@ -37,104 +32,58 @@ function StatusBadge({ status }: { status: ClientCampaignRow['status'] }) {
   );
 }
 
-// ─── Photo thumbnail ──────────────────────────────────────────────
+// ─── Box-opening overlay ──────────────────────────────────────────
 
-function PhotoThumb({ storagePath }: { storagePath: string | null }) {
-  const { data: uri } = useQuery({
-    queryKey: ['client-photo-thumb', storagePath],
-    queryFn: () => getClientPhotoSignedUrl(storagePath!),
-    enabled: !!storagePath,
-    staleTime: 50 * 60 * 1000,
-  });
-
-  if (!uri) {
-    return <View className="size-20 rounded-xl bg-neutral-100 dark:bg-neutral-700" />;
-  }
+function CampaignOpenOverlay({ visible }: { visible: boolean }) {
   return (
-    <ExpoImage
-      source={{ uri }}
-      style={{ width: 80, height: 80, borderRadius: 12 }}
-      contentFit="cover"
-    />
+    <Modal transparent animationType="fade" visible={visible} statusBarTranslucent>
+      <View className="flex-1 items-center justify-center bg-black/60">
+        <CampaignFillAnimation size={220} />
+      </View>
+    </Modal>
   );
 }
 
 // ─── Campaign card ────────────────────────────────────────────────
 
 function CampaignCard({ campaign, index }: { campaign: ClientCampaignRow; index: number }) {
-  const [expanded, setExpanded] = React.useState(false);
+  const router = useRouter();
+  const [opening, setOpening] = React.useState(false);
 
-  const photosQ = useQuery<ClientPhotoRow[]>({
-    queryKey: ['client-campaign-photos', campaign.id],
-    queryFn: () => fetchClientCampaignPhotos(campaign.id),
-    enabled: expanded,
-    staleTime: 5 * 60 * 1000,
-  });
+  function handlePress() {
+    setOpening(true);
+    // Let the box animation play for ~1.1s then navigate
+    setTimeout(() => {
+      setOpening(false);
+      router.push(`/(app)/client/campaign/${campaign.id}`);
+    }, 1100);
+  }
 
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 16 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: motionTokens.duration.base, delay: index * 60 }}
-      className="rounded-2xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
-    >
-      {/* Header row */}
-      <TouchableOpacity
-        onPress={() => setExpanded(o => !o)}
-        activeOpacity={0.8}
-        className="flex-row items-center justify-between p-4"
+    <>
+      <CampaignOpenOverlay visible={opening} />
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: motionTokens.duration.base, delay: index * 60 }}
+        className="rounded-2xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
       >
-        <View className="flex-1 gap-1 pr-3">
-          <Text className="text-sm font-semibold" numberOfLines={1}>{campaign.title}</Text>
-          <Text className="text-xs text-neutral-500">
-            {format(new Date(`${campaign.campaign_date}T12:00:00`), 'MMM d, yyyy')}
-            {campaign.photo_count > 0 ? ` · ${campaign.photo_count} photo${campaign.photo_count !== 1 ? 's' : ''}` : ''}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-2">
-          <StatusBadge status={campaign.status} />
-          <MotiView
-            animate={{ rotate: expanded ? '180deg' : '0deg' }}
-            transition={{ type: 'timing', duration: motionTokens.duration.fast }}
-          >
-            <CaretDown color="#737373" width={16} height={16} />
-          </MotiView>
-        </View>
-      </TouchableOpacity>
-
-      {/* Expandable photo grid */}
-      {expanded && (
-        <MotiView
-          from={{ opacity: 0, translateY: -6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: motionTokens.duration.fast }}
-          className="border-t border-neutral-100 p-4 dark:border-neutral-700"
+        <TouchableOpacity
+          onPress={handlePress}
+          activeOpacity={0.8}
+          className="flex-row items-center justify-between p-4"
         >
-          {photosQ.isLoading && (
-            <View className="items-center py-4">
-              <SpinnerAnimation size={40} />
-            </View>
-          )}
-          {!photosQ.isLoading && (photosQ.data?.length ?? 0) === 0 && (
-            <Text className="py-4 text-center text-xs text-neutral-400">No photos yet</Text>
-          )}
-          {(photosQ.data?.length ?? 0) > 0 && (
-            <View className="flex-row flex-wrap gap-2">
-              {photosQ.data!.map((photo, i) => (
-                <MotiView
-                  key={photo.id}
-                  from={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: 'timing', duration: motionTokens.duration.fast, delay: i * 40 }}
-                >
-                  <PhotoThumb storagePath={photo.storage_path} />
-                </MotiView>
-              ))}
-            </View>
-          )}
-        </MotiView>
-      )}
-    </MotiView>
+          <View className="flex-1 gap-1 pr-3">
+            <Text className="text-sm font-semibold" numberOfLines={1}>{campaign.title}</Text>
+            <Text className="text-xs text-neutral-500">
+              {format(new Date(`${campaign.campaign_date}T12:00:00`), 'MMM d, yyyy')}
+              {campaign.photo_count > 0 ? ` · ${campaign.photo_count} photo${campaign.photo_count !== 1 ? 's' : ''}` : ''}
+            </Text>
+          </View>
+          <StatusBadge status={campaign.status} />
+        </TouchableOpacity>
+      </MotiView>
+    </>
   );
 }
 
