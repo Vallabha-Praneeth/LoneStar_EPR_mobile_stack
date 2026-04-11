@@ -10,6 +10,7 @@ export type DriverDetailRow = {
   emergency_contact_phone: string | null;
   base_daily_wage: number | null;
   city: string | null;
+  can_create_routes: boolean | null;
   profiles: { display_name: string; username: string } | null;
 };
 
@@ -39,7 +40,7 @@ export async function fetchDriverByProfileId(profileId: string): Promise<DriverD
   const { data, error } = await supabase
     .from('drivers')
     .select(
-      'id, profile_id, license_number, license_type, license_expiry, emergency_contact_name, emergency_contact_phone, base_daily_wage, city, profiles:profile_id ( display_name, username )',
+      'id, profile_id, license_number, license_type, license_expiry, emergency_contact_name, emergency_contact_phone, base_daily_wage, city, can_create_routes, profiles:profile_id ( display_name, username )',
     )
     .eq('profile_id', profileId)
     .single();
@@ -68,6 +69,7 @@ export async function upsertDriverRecord(
     emergency_contact_phone: string | null;
     base_daily_wage: number | null;
     city: string | null;
+    can_create_routes: boolean | null;
   },
 ): Promise<void> {
   if (!existingId) {

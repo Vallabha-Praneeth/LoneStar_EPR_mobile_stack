@@ -1,10 +1,17 @@
 import { supabase } from '@/lib/supabase';
 
+export type RouteStop = {
+  id: string;
+  stop_order: number;
+  venue_name: string;
+  address: string | null;
+};
+
 export type DriverCampaignData = {
   id: string;
   title: string;
   campaign_date: string;
-  routes: { name: string } | null;
+  routes: { name: string; route_stops: RouteStop[] } | null;
   status: 'draft' | 'pending' | 'active' | 'completed';
   driver_shifts: { id: string; started_at: string; ended_at: string | null }[];
   campaign_photos: { id: string; submitted_at: string; storage_path: string | null }[];
@@ -22,7 +29,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, title, campaign_date, routes ( name ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at, storage_path )',
+      'id, title, campaign_date, routes ( name, route_stops ( id, stop_order, venue_name, address ) ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at, storage_path )',
     )
     .eq('driver_profile_id', driverId)
     .gte('campaign_date', today)
@@ -39,17 +46,27 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   // Supabase joins can return an object or an array depending on the FK
   // relationship detection. Normalize to match DriverCampaignData.
   const raw = data as Record<string, unknown>;
-  const routes = raw.routes;
-  const normalizedRoutes = Array.isArray(routes)
-    ? (routes[0] ?? null)
-    : (routes ?? null);
+  const routesRaw = raw.routes;
+  const routesObj: Record<string, unknown> | null = Array.isArray(routesRaw)
+    ? (routesRaw[0] ?? null)
+    : ((routesRaw as Record<string, unknown> | null) ?? null);
+
+  let normalizedRoutes: DriverCampaignData['routes'] = null;
+  if (routesObj) {
+    const stopsRaw = routesObj.route_stops;
+    const stops: RouteStop[] = (Array.isArray(stopsRaw) ? stopsRaw : []) as RouteStop[];
+    normalizedRoutes = {
+      name: routesObj.name as string,
+      route_stops: stops.sort((a, b) => a.stop_order - b.stop_order),
+    };
+  }
 
   return {
     id: raw.id as string,
     title: raw.title as string,
     campaign_date: raw.campaign_date as string,
     status: raw.status as DriverCampaignData['status'],
-    routes: normalizedRoutes as DriverCampaignData['routes'],
+    routes: normalizedRoutes,
     driver_shifts: (raw.driver_shifts ?? []) as DriverCampaignData['driver_shifts'],
     campaign_photos: (raw.campaign_photos ?? []) as DriverCampaignData['campaign_photos'],
   };

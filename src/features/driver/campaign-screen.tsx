@@ -1,4 +1,4 @@
-import type { DriverCampaignData, PastCampaignRow } from '@/lib/api/driver/campaign';
+import type { DriverCampaignData, PastCampaignRow, RouteStop } from '@/lib/api/driver/campaign';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
@@ -9,7 +9,7 @@ import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
-import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { CampaignMilestoneAnimation, CampaignProgressAnimation, SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
@@ -326,6 +326,171 @@ function PastCampaignsAccordion({ driverId }: { driverId: string }) {
   );
 }
 
+// ─── Route stops ─────────────────────────────────────────────────
+
+type StopState = { stop: RouteStop; done: boolean; skipped: boolean };
+
+function StopRow({
+  item,
+  index,
+  total,
+  onDone,
+  onSkip,
+  onMove,
+}: {
+  item: StopState;
+  index: number;
+  total: number;
+  onDone: () => void;
+  onSkip: () => void;
+  onMove: (dir: 'up' | 'down') => void;
+}) {
+  const { stop, done, skipped } = item;
+  return (
+    <MotiView
+      from={{ opacity: 0, translateX: -8 }}
+      animate={{ opacity: 1, translateX: 0 }}
+      transition={{ type: 'timing', duration: motionTokens.duration.fast, delay: index * 40 }}
+      className={`flex-row items-center gap-2 py-2 ${index < total - 1 ? 'border-b border-neutral-100 dark:border-neutral-700' : ''}`}
+    >
+      {/* Move buttons */}
+      <View className="gap-0.5">
+        <TouchableOpacity
+          disabled={index === 0 || done || skipped}
+          onPress={() => onMove('up')}
+          className="rounded-sm bg-neutral-100 px-1.5 py-0.5 disabled:opacity-30 dark:bg-neutral-700"
+        >
+          <Text className="text-xs">↑</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          disabled={index === total - 1 || done || skipped}
+          onPress={() => onMove('down')}
+          className="rounded-sm bg-neutral-100 px-1.5 py-0.5 disabled:opacity-30 dark:bg-neutral-700"
+        >
+          <Text className="text-xs">↓</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Stop info */}
+      <View className="flex-1">
+        <Text
+          className={`text-sm font-medium ${done ? 'text-neutral-400 line-through' : skipped ? 'text-neutral-400 line-through' : ''}`}
+          numberOfLines={1}
+        >
+          {stop.venue_name}
+        </Text>
+        {stop.address
+          ? (
+              <Text className="text-xs text-neutral-500" numberOfLines={1}>{stop.address}</Text>
+            )
+          : null}
+      </View>
+
+      {/* Actions */}
+      {!done && !skipped
+        ? (
+            <>
+              <TouchableOpacity
+                onPress={onDone}
+                className="rounded-lg bg-green-100 px-2.5 py-1 dark:bg-green-900/40"
+              >
+                <Text className="text-xs font-semibold text-green-700 dark:text-green-400">Done</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onSkip}
+                className="rounded-lg bg-neutral-100 px-2.5 py-1 dark:bg-neutral-700"
+              >
+                <Text className="text-xs font-medium text-neutral-500">Skip</Text>
+              </TouchableOpacity>
+            </>
+          )
+        : (
+            <View className={`rounded-full px-2 py-0.5 ${done ? 'bg-green-100 dark:bg-green-900/40' : 'bg-neutral-100 dark:bg-neutral-700'}`}>
+              <Text className={`text-xs font-medium ${done ? 'text-green-700 dark:text-green-400' : 'text-neutral-400'}`}>
+                {done ? '✓' : 'Skipped'}
+              </Text>
+            </View>
+          )}
+    </MotiView>
+  );
+}
+
+function RouteStopsCard({ stops }: { stops: RouteStop[] }) {
+  const [items, setItems] = React.useState<StopState[]>(
+    () => stops.map(s => ({ stop: s, done: false, skipped: false })),
+  );
+
+  const doneCount = items.filter(i => i.done).length;
+  const activeCount = items.filter(i => !i.skipped).length;
+  const allDone = activeCount > 0 && items.filter(i => !i.skipped).every(i => i.done);
+
+  function markDone(idx: number) {
+    setItems(prev => prev.map((it, i) => (i === idx ? { ...it, done: true } : it)));
+  }
+
+  function markSkip(idx: number) {
+    setItems(prev => prev.map((it, i) => (i === idx ? { ...it, skipped: true } : it)));
+  }
+
+  function moveStop(index: number, dir: 'up' | 'down') {
+    setItems((prev) => {
+      const arr = [...prev];
+      const t = dir === 'up' ? index - 1 : index + 1;
+      if (t < 0 || t >= arr.length)
+        return prev;
+      [arr[index], arr[t]] = [arr[t], arr[index]];
+      return arr;
+    });
+  }
+
+  return (
+    <MotiView
+      from={{ opacity: 0, translateY: 16 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'timing', duration: motionTokens.duration.base, delay: 240 }}
+      className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800"
+    >
+      {/* Header + progress bar */}
+      <View className="mb-3 flex-row items-center justify-between">
+        <Text className="font-semibold">Route Stops</Text>
+        <Text className="text-xs text-neutral-500">
+          {`${doneCount} / ${activeCount} done`}
+        </Text>
+      </View>
+
+      <View className="mb-3 items-center">
+        <CampaignProgressAnimation width={220} height={48} />
+      </View>
+
+      {allDone && (
+        <MotiView
+          from={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={motionTokens.spring.lively}
+          className="mb-3 items-center"
+        >
+          <CampaignMilestoneAnimation size={80} />
+          <Text className="mt-1 text-center text-sm font-semibold text-green-600 dark:text-green-400">
+            All stops complete!
+          </Text>
+        </MotiView>
+      )}
+
+      {items.map((item, i) => (
+        <StopRow
+          key={item.stop.id}
+          item={item}
+          index={i}
+          total={items.length}
+          onDone={() => markDone(i)}
+          onSkip={() => markSkip(i)}
+          onMove={dir => moveStop(i, dir)}
+        />
+      ))}
+    </MotiView>
+  );
+}
+
 function useShiftMutations(campaign: Awaited<ReturnType<typeof fetchDriverCampaign>>) {
   const signOut = useAuthStore.use.signOut();
   const queryClient = useQueryClient();
@@ -443,6 +608,9 @@ export function CampaignScreen() {
             />
           </View>
         </MotiView>
+        {campaign.routes?.route_stops && campaign.routes.route_stops.length > 0
+          ? <RouteStopsCard stops={campaign.routes.route_stops} />
+          : null}
         {recentPhotos.length > 0 ? <RecentUploadsList photos={recentPhotos} /> : null}
         {profile?.id ? <PastCampaignsAccordion driverId={profile.id} /> : null}
       </ScrollView>

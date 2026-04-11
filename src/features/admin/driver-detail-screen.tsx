@@ -15,7 +15,7 @@ import { showMessage } from 'react-native-flash-message';
 import { AdminHeader } from '@/components/admin-header';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
-import { Button, Text, View } from '@/components/ui';
+import { Button, Switch, Text, View } from '@/components/ui';
 import {
   fetchDriverByProfileId,
   fetchDriverShiftHistory,
@@ -102,6 +102,7 @@ type DriverFormInitial = {
   emergencyContactPhone: string;
   baseDailyWage: string;
   city: string;
+  canCreateRoutes: boolean;
 };
 
 function driverFormInitial(driver: DriverDetailRow | null | undefined): DriverFormInitial {
@@ -114,6 +115,7 @@ function driverFormInitial(driver: DriverDetailRow | null | undefined): DriverFo
       emergencyContactPhone: '',
       baseDailyWage: '',
       city: '',
+      canCreateRoutes: false,
     };
   }
   return {
@@ -124,6 +126,7 @@ function driverFormInitial(driver: DriverDetailRow | null | undefined): DriverFo
     emergencyContactPhone: driver.emergency_contact_phone ?? '',
     baseDailyWage: driver.base_daily_wage?.toString() ?? '',
     city: driver.city ?? '',
+    canCreateRoutes: driver.can_create_routes ?? false,
   };
 }
 
@@ -266,6 +269,7 @@ function DriverProfileForm({
   const [emergencyContactPhone, setEmergencyContactPhone] = React.useState(initial.emergencyContactPhone);
   const [baseDailyWage, setBaseDailyWage] = React.useState(initial.baseDailyWage);
   const [city, setCity] = React.useState(initial.city);
+  const [canCreateRoutes, setCanCreateRoutes] = React.useState(initial.canCreateRoutes);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -278,6 +282,7 @@ function DriverProfileForm({
         emergency_contact_phone: emergencyContactPhone.trim() || null,
         base_daily_wage: !Number.isNaN(wageNum) && wageNum >= 0 ? wageNum : null,
         city: city.trim() || null,
+        can_create_routes: canCreateRoutes,
       };
       await upsertDriverRecord(profileId, driverRowId, fields);
     },
@@ -311,6 +316,17 @@ function DriverProfileForm({
         setBaseDailyWage={setBaseDailyWage}
         setCity={setCity}
       />
+      <View className="mb-4 flex-row items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
+        <View className="flex-1 pr-4">
+          <Text className="text-sm font-medium">Allow driver to create routes</Text>
+          <Text className="mt-0.5 text-xs text-neutral-500">Driver can build and save custom route stops</Text>
+        </View>
+        <Switch
+          checked={canCreateRoutes}
+          onChange={setCanCreateRoutes}
+          accessibilityLabel="Allow driver to create routes"
+        />
+      </View>
       <Button
         label={mutation.isPending ? 'Saving…' : 'Save details'}
         onPress={() => mutation.mutate()}
