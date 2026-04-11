@@ -12,6 +12,7 @@ import { AppLogo } from '@/components/app-logo';
 import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import {
   endShift,
@@ -65,13 +66,16 @@ function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
     <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
         right={(
-          <TouchableOpacity
-            onPress={onSignOut}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-          >
-            <LogOut color="#737373" width={18} height={18} />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            <ThemeToggle />
+            <TouchableOpacity
+              onPress={onSignOut}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+            >
+              <LogOut color="#737373" width={18} height={18} />
+            </TouchableOpacity>
+          </View>
         )}
       />
       <View className="flex-1 items-center justify-center p-6">
@@ -408,6 +412,7 @@ export function CampaignScreen() {
                 {activeShift ? 'Active' : campaign.status}
               </Text>
             </MotiView>
+            <ThemeToggle />
             <TouchableOpacity
               onPress={signOut}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

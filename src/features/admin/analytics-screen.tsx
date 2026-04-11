@@ -14,6 +14,7 @@ import { HorizontalBarChart } from '@/components/ui/horizontal-bar-chart';
 import { BarChart, Clock, DollarSign, Truck, Users } from '@/components/ui/icons';
 import { useModal } from '@/components/ui/modal';
 import { Options } from '@/components/ui/select';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
   formatCurrency,
   formatHours,
@@ -260,7 +261,10 @@ function FilterHeader(p: FilterHeaderProps) {
     >
       <View className="flex-row items-center justify-between px-4 pb-2">
         <AppLogo size="sm" showText />
-        <RangePicker value={p.range} onChange={p.onRangeChange} />
+        <View className="flex-row items-center gap-2">
+          <RangePicker value={p.range} onChange={p.onRangeChange} />
+          <ThemeToggle />
+        </View>
       </View>
       <ScrollView
         horizontal

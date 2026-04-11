@@ -11,6 +11,7 @@ import { AppLogo } from '@/components/app-logo';
 import { LottieAnimation, lottieAssets, SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Camera, Clock, LogOut } from '@/components/ui/icons';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchClientCampaigns } from '@/lib/api/client/campaigns';
 import { motionTokens } from '@/lib/motion/tokens';
@@ -120,10 +121,11 @@ export function ClientLandingScreen() {
       >
         <AppLogo size="sm" showText />
         <View className="flex-row items-center gap-1">
+          <ThemeToggle />
           <TouchableOpacity
             onPress={() => router.push('/(app)/client/timing')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="mr-1 size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
             accessibilityLabel="Timing sheet"
           >
             <Clock color="#737373" width={18} height={18} />
