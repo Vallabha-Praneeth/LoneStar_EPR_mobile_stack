@@ -1,7 +1,10 @@
 import type { DimensionValue, ViewStyle } from 'react-native';
+import type { RiveRef } from 'rive-react-native';
 import * as React from 'react';
-import { View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import Rive, { Alignment, Fit } from 'rive-react-native';
+
+import { riveAssets } from './rive-assets';
 
 type Props = {
   source: number; // require()'d .riv asset
@@ -292,5 +295,90 @@ export function WelcomeCharacterAnimation({ size = 120 }: { size?: number }) {
       autoplay
       testID="welcome-character-animation"
     />
+  );
+}
+
+// ─── Controls ────────────────────────────────────────────────────
+
+/**
+ * Rive toggle switch — plays Timeline 1 forwards (light → dark)
+ * or backwards (dark → light) on each theme change.
+ * Pass a riveRef to control playback from RiveThemeToggle.
+ */
+export function ToggleSwitchAnimation({
+  width = 56,
+  height = 32,
+  riveRef,
+}: {
+  width?: number;
+  height?: number;
+  riveRef: React.RefObject<RiveRef | null>;
+}) {
+  return (
+    <View style={{ width, height }} testID="toggle-switch-animation">
+      <Rive
+        resourceName={undefined}
+        url={undefined}
+        ref={riveRef}
+        source={riveAssets.toggleSwitch}
+        fit={Fit.Contain}
+        alignment={Alignment.Center}
+        autoplay={false}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </View>
+  );
+}
+
+type RiveButtonProps = {
+  onPress: () => void;
+  disabled?: boolean;
+  width?: number;
+  height?: number;
+  style?: ViewStyle;
+  testID?: string;
+};
+
+/**
+ * Rive button animation — fires the CLICK trigger on press and plays
+ * the IDLE state machine. Drop-in animated replacement for flat buttons.
+ */
+export function RiveButton({
+  onPress,
+  disabled = false,
+  width = 200,
+  height = 56,
+  style,
+  testID,
+}: RiveButtonProps) {
+  const riveRef = React.useRef<RiveRef>(null);
+
+  function handlePress() {
+    if (disabled)
+      return;
+    riveRef.current?.fireState('State Machine 1', 'CLICK');
+    onPress();
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      disabled={disabled}
+      activeOpacity={1}
+      style={[{ width, height }, style]}
+      testID={testID}
+    >
+      <Rive
+        resourceName={undefined}
+        url={undefined}
+        ref={riveRef}
+        source={riveAssets.buttonAnimation}
+        stateMachineName="State Machine 1"
+        fit={Fit.Contain}
+        alignment={Alignment.Center}
+        autoplay
+        style={{ width: '100%', height: '100%' }}
+      />
+    </TouchableOpacity>
   );
 }

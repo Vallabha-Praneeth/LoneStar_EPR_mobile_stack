@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
-import { CampaignCreatedAnimation } from '@/components/motion';
+import { CampaignCreatedAnimation, RiveButton } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { createCampaign } from '@/lib/api/admin/campaigns';
@@ -125,6 +125,8 @@ function CampaignFormBody({
   loadingClients,
   loadingDrivers,
   loadingRoutes,
+  onSubmit,
+  isPending,
 }: {
   form: FormState;
   setField: <K extends keyof FormState>(key: K, val: FormState[K]) => void;
@@ -134,6 +136,8 @@ function CampaignFormBody({
   loadingClients: boolean;
   loadingDrivers: boolean;
   loadingRoutes: boolean;
+  onSubmit: () => void;
+  isPending: boolean;
 }) {
   const activeRoutes = routes.filter(r => r.is_active);
   return (
@@ -179,6 +183,16 @@ function CampaignFormBody({
       <FormField label="Internal Notes">
         <FormInput value={form.internalNotes} onChangeText={v => setField('internalNotes', v)} placeholder="Optional notes..." multiline />
       </FormField>
+
+      <View className="items-center pt-2 pb-4">
+        <RiveButton
+          onPress={onSubmit}
+          disabled={isPending}
+          width={260}
+          height={64}
+          testID="create-campaign-button"
+        />
+      </View>
     </ScrollView>
   );
 }
@@ -270,6 +284,8 @@ export function CreateCampaignScreen() {
           loadingClients={loadingClients}
           loadingDrivers={loadingDrivers}
           loadingRoutes={loadingRoutes}
+          onSubmit={handleSubmit}
+          isPending={mutation.isPending}
         />
       </KeyboardAvoidingView>
     </View>

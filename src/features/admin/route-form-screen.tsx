@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { AdminHeader } from '@/components/admin-header';
-import { Button, Switch, Text, View } from '@/components/ui';
+import { RiveButton } from '@/components/motion';
+import { Switch, Text, View } from '@/components/ui';
 import { Plus } from '@/components/ui/icons';
 import { deleteRoute, fetchRouteById, upsertRoute } from '@/lib/api/admin/routes';
 
@@ -327,11 +328,15 @@ function RouteFormEditor({
           onMoveStop={moveStop}
         />
 
-        <Button
-          label={mutation.isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Create route'}
-          onPress={() => mutation.mutate()}
-          disabled={mutation.isPending}
-        />
+        <View className="items-center py-2">
+          <RiveButton
+            onPress={() => mutation.mutate()}
+            disabled={mutation.isPending}
+            width={260}
+            height={64}
+            testID="save-route-button"
+          />
+        </View>
         {isEdit && routeId && (
           <DeleteRouteButton routeId={routeId} routeName={name.trim()} />
         )}

@@ -9,6 +9,9 @@ export const riveAssets = {
   checkmark: require('../../../assets/animations/checkmark.riv'),
   spinner: require('../../../assets/animations/spinner.riv'),
   juice: require('../../../assets/animations/juice.riv'),
+  // Controls
+  buttonAnimation: require('../../../assets/animations/button-animation.riv'),
+  toggleSwitch: require('../../../assets/animations/toggle-switch.riv'),
   // Admin
   dashboardHero: require('../../../assets/animations/dashboard-hero.riv'),
   campaignProgress: require('../../../assets/animations/campaign-progress.riv'),
