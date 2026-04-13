@@ -5,6 +5,8 @@ export type RouteStop = {
   stop_order: number;
   venue_name: string;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type DriverCampaignData = {
@@ -29,7 +31,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, title, campaign_date, routes ( name, route_stops ( id, stop_order, venue_name, address ) ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at, storage_path )',
+      'id, title, campaign_date, routes ( name, route_stops ( id, stop_order, venue_name, address, latitude, longitude ) ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at, storage_path )',
     )
     .eq('driver_profile_id', driverId)
     .gte('campaign_date', today)

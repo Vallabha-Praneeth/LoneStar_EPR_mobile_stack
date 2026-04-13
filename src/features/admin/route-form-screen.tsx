@@ -1,8 +1,11 @@
+import type { CameraRef } from '@maplibre/maplibre-react-native';
 import type { RouteDetail } from '@/lib/api/admin/routes';
+import MapLibreGL from '@maplibre/maplibre-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as React from 'react';
 
+import * as React from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,7 +22,35 @@ import { Switch, Text, View } from '@/components/ui';
 import { Plus } from '@/components/ui/icons';
 import { deleteRoute, fetchRouteById, upsertRoute } from '@/lib/api/admin/routes';
 
-type StopDraft = { key: string; venue_name: string; address: string };
+MapLibreGL.setAccessToken(null);
+
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+
+type StopDraft = {
+  key: string;
+  venue_name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+async function geocodeStops(stops: StopDraft[]): Promise<StopDraft[]> {
+  return Promise.all(
+    stops.map(async (s) => {
+      if (!s.address.trim() || (s.latitude !== null && s.longitude !== null))
+        return s;
+      try {
+        const results = await Location.geocodeAsync(s.address);
+        if (results.length > 0)
+          return { ...s, latitude: results[0].latitude, longitude: results[0].longitude };
+      }
+      catch {
+        // geocoding unavailable — leave coords null
+      }
+      return s;
+    }),
+  );
+}
 
 function newStopKey(): string {
   return `s-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -30,6 +61,8 @@ function stopsFromRoute(d: RouteDetail): StopDraft[] {
     key: s.id,
     venue_name: s.venue_name,
     address: s.address ?? '',
+    latitude: null,
+    longitude: null,
   }));
 }
 
@@ -203,6 +236,117 @@ function RouteStopsCard({
   );
 }
 
+type StopWithCoords = StopDraft & { latitude: number; longitude: number };
+
+function RouteMapPreview({ stops }: { stops: StopDraft[] }) {
+  const cameraRef = React.useRef<CameraRef>(null);
+
+  const stopsWithCoords = stops.filter(
+    (s): s is StopWithCoords => s.latitude !== null && s.longitude !== null,
+  );
+
+  const onMapLoaded = React.useCallback(() => {
+    if (stopsWithCoords.length < 2)
+      return;
+    const lngs = stopsWithCoords.map(s => s.longitude);
+    const lats = stopsWithCoords.map(s => s.latitude);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    cameraRef.current?.fitBounds([maxLng, maxLat], [minLng, minLat], 40, 300);
+  }, [stopsWithCoords]);
+
+  if (stopsWithCoords.length < 2)
+    return null;
+
+  const lineGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: stopsWithCoords.map(s => [s.longitude, s.latitude]),
+    },
+    properties: {},
+  };
+
+  return (
+    <View className="mb-4 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
+      <MapLibreGL.MapView
+        style={{ height: 220 }}
+        mapStyle={STYLE_URL}
+        logoEnabled={false}
+        attributionEnabled={false}
+        onDidFinishLoadingMap={onMapLoaded}
+      >
+        <MapLibreGL.Camera ref={cameraRef} />
+        <MapLibreGL.ShapeSource id="route-line" shape={lineGeoJson}>
+          <MapLibreGL.LineLayer
+            id="route-line-layer"
+            style={{ lineColor: '#3b82f6', lineWidth: 3 }}
+          />
+        </MapLibreGL.ShapeSource>
+        {stopsWithCoords.map((stop, i) => (
+          <MapLibreGL.PointAnnotation
+            key={stop.key}
+            id={`stop-${i}`}
+            coordinate={[stop.longitude, stop.latitude]}
+          >
+            <View
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: '#3b82f6',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 2,
+                borderColor: '#ffffff',
+              }}
+            >
+              <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '700' }}>
+                {i + 1}
+              </Text>
+            </View>
+          </MapLibreGL.PointAnnotation>
+        ))}
+      </MapLibreGL.MapView>
+    </View>
+  );
+}
+
+function makeStopActions(setStops: React.Dispatch<React.SetStateAction<StopDraft[]>>) {
+  function addStop() {
+    setStops(prev => [...prev, { key: newStopKey(), venue_name: '', address: '', latitude: null, longitude: null }]);
+  }
+
+  function removeStop(i: number) {
+    setStops(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  function updateStop(i: number, field: 'venue_name' | 'address', v: string) {
+    setStops(prev => prev.map((s, idx) => {
+      if (idx !== i)
+        return s;
+      if (field === 'address')
+        return { ...s, address: v, latitude: null, longitude: null };
+      return { ...s, [field]: v };
+    }));
+  }
+
+  function moveStop(index: number, dir: 'up' | 'down') {
+    setStops((prev) => {
+      const arr = [...prev];
+      const t = dir === 'up' ? index - 1 : index + 1;
+      if (t < 0 || t >= arr.length)
+        return prev;
+      [arr[index], arr[t]] = [arr[t], arr[index]];
+      return arr;
+    });
+  }
+
+  return { addStop, removeStop, updateStop, moveStop };
+}
+
 function DeleteRouteButton({ routeId, routeName }: { routeId: string; routeName: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -257,20 +401,25 @@ function RouteFormEditor({
   const [city, setCity] = React.useState(initialCity);
   const [isActive, setIsActive] = React.useState(initialActive);
   const [stops, setStops] = React.useState<StopDraft[]>(initialStops);
+  const { addStop, removeStop, updateStop, moveStop } = makeStopActions(setStops);
 
   const mutation = useMutation({
     mutationFn: async () => {
       const n = name.trim();
       if (!n)
         throw new Error('Route name is required');
+      const geocodedStops = await geocodeStops(stops);
+      setStops(geocodedStops);
       await upsertRoute({
         routeId: isEdit ? routeId : undefined,
         name: n,
         city: city.trim() || null,
         isActive,
-        stops: stops.map(s => ({
+        stops: geocodedStops.map(s => ({
           venue_name: s.venue_name,
           address: s.address.trim() || null,
+          latitude: s.latitude,
+          longitude: s.longitude,
         })),
       });
     },
@@ -282,29 +431,6 @@ function RouteFormEditor({
     },
     onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
   });
-
-  function addStop() {
-    setStops(prev => [...prev, { key: newStopKey(), venue_name: '', address: '' }]);
-  }
-
-  function removeStop(i: number) {
-    setStops(prev => prev.filter((_, idx) => idx !== i));
-  }
-
-  function updateStop(i: number, field: 'venue_name' | 'address', v: string) {
-    setStops(prev => prev.map((s, idx) => (idx === i ? { ...s, [field]: v } : s)));
-  }
-
-  function moveStop(index: number, dir: 'up' | 'down') {
-    setStops((prev) => {
-      const arr = [...prev];
-      const t = dir === 'up' ? index - 1 : index + 1;
-      if (t < 0 || t >= arr.length)
-        return prev;
-      [arr[index], arr[t]] = [arr[t], arr[index]];
-      return arr;
-    });
-  }
 
   return (
     <KeyboardAvoidingView
@@ -327,6 +453,7 @@ function RouteFormEditor({
           onRemoveStop={removeStop}
           onMoveStop={moveStop}
         />
+        <RouteMapPreview stops={stops} />
 
         <View className="items-center py-2">
           <RiveButton

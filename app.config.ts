@@ -114,6 +114,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-localization',
     'expo-location',
+    '@maplibre/maplibre-react-native',
     'expo-router',
     [
       'expo-image-picker',

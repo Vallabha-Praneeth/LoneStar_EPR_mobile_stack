@@ -46,6 +46,8 @@ export default antfu(
       // that conflict with the yaml/quotes rule enforced by antfu preset
       '.maestro/**/*.{yml,yaml}',
       '.github/**/*.{yml,yaml}',
+      // Agent worktrees — isolated sandboxes, not part of the main project
+      '.claude/worktrees/**',
       '.coderabbit.yaml',
     ],
   },

@@ -1,12 +1,13 @@
 import type { DriverCampaignData, PastCampaignRow, RouteStop } from '@/lib/api/driver/campaign';
+import MapLibreGL from '@maplibre/maplibre-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
-import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
 import { CampaignMilestoneAnimation, CampaignProgressAnimation, SpinnerAnimation, TruckAnimation } from '@/components/motion';
@@ -26,6 +27,10 @@ import {
 } from '@/lib/api/driver/campaign';
 import { completeStop } from '@/lib/api/driver/photos';
 import { motionTokens } from '@/lib/motion/tokens';
+
+MapLibreGL.setAccessToken(null);
+
+const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
 type CampaignPhoto = DriverCampaignData['campaign_photos'][number];
 
@@ -329,6 +334,117 @@ function PastCampaignsAccordion({ driverId }: { driverId: string }) {
   );
 }
 
+// ─── Route map ───────────────────────────────────────────────────
+
+const mapStyles = StyleSheet.create({
+  map: { height: 200 },
+  markerDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  driverDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+});
+
+function RouteMapCard({
+  stops,
+  driverCoord,
+}: {
+  stops: RouteStop[];
+  driverCoord: [number, number] | null;
+}) {
+  const stopsWithCoords = stops.filter(
+    s => s.latitude != null && s.longitude != null,
+  );
+
+  if (stopsWithCoords.length < 2)
+    return null;
+
+  const sumLat = stopsWithCoords.reduce((acc, s) => acc + s.latitude!, 0);
+  const sumLng = stopsWithCoords.reduce((acc, s) => acc + s.longitude!, 0);
+  const centerLat = sumLat / stopsWithCoords.length;
+  const centerLng = sumLng / stopsWithCoords.length;
+
+  const lineCoords = stopsWithCoords.map(s => [s.longitude!, s.latitude!]);
+  const lineGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'LineString', coordinates: lineCoords },
+  };
+
+  return (
+    <>
+      <Text className="text-xs font-semibold tracking-wide text-neutral-400 uppercase">
+        Route Map
+      </Text>
+      <MotiView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: motionTokens.duration.base, delay: 180 }}
+        style={{ borderRadius: 16, overflow: 'hidden' }}
+      >
+        <MapLibreGL.MapView
+          style={mapStyles.map}
+          mapStyle={MAP_STYLE_URL}
+          logoEnabled={false}
+          attributionEnabled={false}
+          scrollEnabled={false}
+          zoomEnabled={false}
+        >
+          <MapLibreGL.Camera
+            centerCoordinate={[centerLng, centerLat]}
+            zoomLevel={12}
+          />
+          <MapLibreGL.ShapeSource id="route-line-source" shape={lineGeoJson}>
+            <MapLibreGL.LineLayer
+              id="route-line"
+              style={{ lineColor: '#3b82f6', lineWidth: 2, lineDasharray: [4, 2] }}
+            />
+          </MapLibreGL.ShapeSource>
+          {stopsWithCoords.map((stop, i) => (
+            <MapLibreGL.PointAnnotation
+              key={stop.id}
+              id={`stop-${i}`}
+              coordinate={[stop.longitude!, stop.latitude!]}
+            >
+              <View style={mapStyles.markerDot}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                  {i + 1}
+                </Text>
+              </View>
+            </MapLibreGL.PointAnnotation>
+          ))}
+          {driverCoord != null
+            ? (
+                <MapLibreGL.PointAnnotation id="driver-pos" coordinate={driverCoord}>
+                  <MotiView
+                    from={{ scale: 1, opacity: 0.5 }}
+                    animate={{ scale: 1.8, opacity: 0 }}
+                    transition={{ type: 'timing', duration: 1100, loop: true }}
+                    style={[mapStyles.driverDot, { position: 'absolute' }]}
+                  />
+                  <View style={mapStyles.driverDot} />
+                </MapLibreGL.PointAnnotation>
+              )
+            : null}
+        </MapLibreGL.MapView>
+      </MotiView>
+    </>
+  );
+}
+
 // ─── Route stops ─────────────────────────────────────────────────
 
 type StopState = { stop: RouteStop; done: boolean; skipped: boolean };
@@ -563,42 +679,32 @@ function useShiftMutations(campaign: Awaited<ReturnType<typeof fetchDriverCampai
   return { startMutation, endMutation };
 }
 
-export function CampaignScreen() {
+type ActiveCampaignProps = {
+  campaign: DriverCampaignData;
+  activeShift: DriverCampaignData['driver_shifts'][number] | undefined;
+  driverCoord: [number, number] | null;
+  signOut: () => void;
+  onStartShift: () => void;
+  isStartPending: boolean;
+  onEndShift: () => void;
+  isEndPending: boolean;
+  recentPhotos: CampaignPhoto[];
+  profileId: string | undefined;
+};
+
+function ActiveCampaignView({
+  campaign,
+  activeShift,
+  driverCoord,
+  signOut,
+  onStartShift,
+  isStartPending,
+  onEndShift,
+  isEndPending,
+  recentPhotos,
+  profileId,
+}: ActiveCampaignProps) {
   const router = useRouter();
-  const profile = useAuthStore.use.profile();
-  const signOut = useAuthStore.use.signOut();
-  const [showSplash, setShowSplash] = React.useState(true);
-  const handleSplashDone = React.useCallback(() => setShowSplash(false), []);
-
-  const { data: campaign, isLoading, error } = useQuery({
-    queryKey: ['driver-campaign', profile?.id],
-    queryFn: () => fetchDriverCampaign(profile!.id),
-    enabled: !!profile?.id,
-  });
-
-  const { startMutation, endMutation } = useShiftMutations(campaign ?? null);
-
-  const activeShift = campaign?.driver_shifts.find(s => !s.ended_at);
-  const recentPhotos = [...(campaign?.campaign_photos ?? [])]
-    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-    .slice(0, 5);
-
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
-        <SpinnerAnimation size={64} />
-      </View>
-    );
-  }
-
-  if (error || !campaign) {
-    return <EmptyCampaignState onSignOut={signOut} />;
-  }
-
-  if (showSplash) {
-    return <DriverLaunchSplash onDone={handleSplashDone} />;
-  }
-
   return (
     <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
@@ -648,20 +754,94 @@ export function CampaignScreen() {
           <View className="gap-3">
             <ShiftActions
               activeShift={!!activeShift}
-              onStartShift={() => startMutation.mutate()}
-              isStartPending={startMutation.isPending}
-              onEndShift={() => endMutation.mutate()}
-              isEndPending={endMutation.isPending}
+              onStartShift={onStartShift}
+              isStartPending={isStartPending}
+              onEndShift={onEndShift}
+              isEndPending={isEndPending}
               onUploadPhoto={() => router.push('/(app)/upload')}
             />
           </View>
         </MotiView>
+        {activeShift && campaign.routes?.route_stops && campaign.routes.route_stops.length >= 2
+          ? (
+              <RouteMapCard
+                stops={campaign.routes.route_stops}
+                driverCoord={driverCoord}
+              />
+            )
+          : null}
         {campaign.routes?.route_stops && campaign.routes.route_stops.length > 0
           ? <RouteStopsCard stops={campaign.routes.route_stops} shiftId={activeShift?.id} />
           : null}
         {recentPhotos.length > 0 ? <RecentUploadsList photos={recentPhotos} /> : null}
-        {profile?.id ? <PastCampaignsAccordion driverId={profile.id} /> : null}
+        {profileId ? <PastCampaignsAccordion driverId={profileId} /> : null}
       </ScrollView>
     </View>
+  );
+}
+
+export function CampaignScreen() {
+  const profile = useAuthStore.use.profile();
+  const signOut = useAuthStore.use.signOut();
+  const [showSplash, setShowSplash] = React.useState(true);
+  const handleSplashDone = React.useCallback(() => setShowSplash(false), []);
+  const [driverCoord, setDriverCoord] = React.useState<[number, number] | null>(null);
+
+  const { data: campaign, isLoading, error } = useQuery({
+    queryKey: ['driver-campaign', profile?.id],
+    queryFn: () => fetchDriverCampaign(profile!.id),
+    enabled: !!profile?.id,
+  });
+
+  const { startMutation, endMutation } = useShiftMutations(campaign ?? null);
+
+  const activeShift = campaign?.driver_shifts.find(s => !s.ended_at);
+
+  React.useEffect(() => {
+    if (!activeShift)
+      return;
+    let sub: Location.LocationSubscription | null = null;
+    Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 10 },
+      pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
+    ).then((s) => { sub = s; });
+    return () => {
+      sub?.remove();
+    };
+  }, [activeShift]);
+
+  const recentPhotos = [...(campaign?.campaign_photos ?? [])]
+    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+    .slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
+        <SpinnerAnimation size={64} />
+      </View>
+    );
+  }
+
+  if (error || !campaign) {
+    return <EmptyCampaignState onSignOut={signOut} />;
+  }
+
+  if (showSplash) {
+    return <DriverLaunchSplash onDone={handleSplashDone} />;
+  }
+
+  return (
+    <ActiveCampaignView
+      campaign={campaign}
+      activeShift={activeShift}
+      driverCoord={driverCoord}
+      signOut={signOut}
+      onStartShift={() => startMutation.mutate()}
+      isStartPending={startMutation.isPending}
+      onEndShift={() => endMutation.mutate()}
+      isEndPending={endMutation.isPending}
+      recentPhotos={recentPhotos}
+      profileId={profile?.id}
+    />
   );
 }

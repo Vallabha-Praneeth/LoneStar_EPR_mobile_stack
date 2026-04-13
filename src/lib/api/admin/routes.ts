@@ -13,6 +13,8 @@ export type RouteStopRow = {
   stop_order: number;
   venue_name: string;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type RouteDetail = {
@@ -23,7 +25,12 @@ export type RouteDetail = {
   route_stops: RouteStopRow[];
 };
 
-export type RouteStopInput = { venue_name: string; address: string | null };
+export type RouteStopInput = {
+  venue_name: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
 
 export type UpsertRouteParams = {
   routeId?: string;
@@ -46,7 +53,7 @@ export async function fetchAdminRoutes(): Promise<AdminRouteRow[]> {
 export async function fetchRouteById(id: string): Promise<RouteDetail> {
   const { data, error } = await supabase
     .from('routes')
-    .select('id, name, city, is_active, route_stops ( id, stop_order, venue_name, address )')
+    .select('id, name, city, is_active, route_stops ( id, stop_order, venue_name, address, latitude, longitude )')
     .eq('id', id)
     .single();
   if (error)
@@ -81,6 +88,8 @@ async function insertStopsForRoute(routeId: string, stops: RouteStopInput[]): Pr
       stop_order: i + 1,
       venue_name: s.venue_name.trim(),
       address: s.address?.trim() || null,
+      latitude: s.latitude,
+      longitude: s.longitude,
     })),
   );
   if (error)
