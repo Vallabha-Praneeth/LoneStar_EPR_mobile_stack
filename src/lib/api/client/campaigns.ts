@@ -7,6 +7,7 @@ export type ClientCampaignRow = {
   status: 'draft' | 'pending' | 'active' | 'completed';
   photo_count: number;
   hasActiveShift: boolean;
+  activeShiftId: string | null;
 };
 
 export type ClientPhotoRow = {
@@ -32,6 +33,7 @@ export async function fetchClientCampaigns(clientId: string): Promise<ClientCamp
     status: row.status,
     photo_count: Array.isArray(row.campaign_photos) ? row.campaign_photos.length : 0,
     hasActiveShift: (row.driver_shifts ?? []).some((s: { ended_at: string | null }) => !s.ended_at),
+    activeShiftId: (row.driver_shifts ?? []).find((s: { id: string; ended_at: string | null }) => !s.ended_at)?.id ?? null,
   }));
 }
 

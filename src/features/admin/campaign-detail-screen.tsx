@@ -1,9 +1,10 @@
 import type { CampaignDetail } from '@/lib/api/admin/campaigns';
+import MapLibreGL from '@maplibre/maplibre-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import { ActivityIndicator, FlatList, Image, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
@@ -16,6 +17,44 @@ import { Card, Text, View } from '@/components/ui';
 import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
+import { useDriverPositionSubscriber } from '@/lib/realtime/driver-location';
+
+MapLibreGL.setAccessToken(null);
+
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+
+const liveMapStyles = StyleSheet.create({
+  map: { height: 160, borderRadius: 12, overflow: 'hidden' },
+  dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#3b82f6', borderWidth: 2, borderColor: '#fff' },
+});
+
+function LiveDriverCard({ shiftId }: { shiftId: string }) {
+  const coord = useDriverPositionSubscriber(shiftId);
+  return (
+    <View className="gap-2">
+      <DriverTransitBadge />
+      {coord != null
+        ? (
+            <MapLibreGL.MapView
+              style={liveMapStyles.map}
+              mapStyle={MAP_STYLE}
+              logoEnabled={false}
+              attributionEnabled={false}
+              scrollEnabled={false}
+              zoomEnabled={false}
+            >
+              <MapLibreGL.Camera centerCoordinate={coord} zoomLevel={14} animationDuration={300} />
+              <MapLibreGL.PointAnnotation id="live-driver" coordinate={coord}>
+                <View style={liveMapStyles.dot} />
+              </MapLibreGL.PointAnnotation>
+            </MapLibreGL.MapView>
+          )
+        : (
+            <Text className="text-xs text-neutral-400">Waiting for driver location…</Text>
+          )}
+    </View>
+  );
+}
 
 function PhotosSectionHeader({ status, photoCount }: { status: string; photoCount: number }) {
   return (
@@ -114,7 +153,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
         </Card>
       )}
 
-      {activeShift ? <DriverTransitBadge /> : null}
+      {activeShift ? <LiveDriverCard shiftId={activeShift.id} /> : null}
 
       {campaign.driver_shifts.length > 0 && (
         <Card className="rounded-xl p-4">

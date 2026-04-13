@@ -27,6 +27,7 @@ import {
 } from '@/lib/api/driver/campaign';
 import { completeStop } from '@/lib/api/driver/photos';
 import { motionTokens } from '@/lib/motion/tokens';
+import { useDriverPositionPublisher } from '@/lib/realtime/driver-location';
 
 MapLibreGL.setAccessToken(null);
 
@@ -84,7 +85,7 @@ function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
           transition={motionTokens.spring.gentle}
           className="w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-8 dark:border-neutral-700 dark:bg-neutral-800"
         >
-          <TruckAnimation size={180} />
+          <TruckAnimation size={380} />
           <Text className="text-center text-sm font-medium text-neutral-500">
             No active campaign assigned to you today.
           </Text>
@@ -796,6 +797,8 @@ export function CampaignScreen() {
   const { startMutation, endMutation } = useShiftMutations(campaign ?? null);
 
   const activeShift = campaign?.driver_shifts.find(s => !s.ended_at);
+
+  useDriverPositionPublisher(activeShift?.id, driverCoord);
 
   React.useEffect(() => {
     if (!activeShift)
