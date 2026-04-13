@@ -8,6 +8,7 @@ import { ActivityIndicator, FlatList, Image, TouchableOpacity } from 'react-nati
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { CampaignStageProgress } from '@/components/campaign-stage-progress';
+import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import { InfoCard } from '@/components/info-card';
 import { ApproveUnlockAnimation, CampaignMilestoneAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
@@ -45,6 +46,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
     (sum, c) => sum + (c.amount ?? 0),
     0,
   );
+  const activeShift = campaign.driver_shifts.find(s => !s.ended_at);
 
   return (
     <View className="mb-2 gap-4">
@@ -111,6 +113,8 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
           <Text className="text-sm">{campaign.internal_notes}</Text>
         </Card>
       )}
+
+      {activeShift ? <DriverTransitBadge /> : null}
 
       {campaign.driver_shifts.length > 0 && (
         <Card className="rounded-xl p-4">

@@ -8,6 +8,7 @@ import { Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/app-logo';
+import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import {
   LottieAnimation,
   lottieAssets,
@@ -154,6 +155,11 @@ function CampaignCard({ campaign, index }: { campaign: ClientCampaignRow; index:
           </View>
           <StatusBadge status={campaign.status} />
         </TouchableOpacity>
+        {campaign.hasActiveShift && campaign.status === 'active' && (
+          <View className="px-4 pb-3">
+            <DriverTransitBadge />
+          </View>
+        )}
       </MotiView>
     </>
   );

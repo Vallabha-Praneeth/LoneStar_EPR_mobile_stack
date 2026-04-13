@@ -15,6 +15,8 @@ import { Text, View } from '@/components/ui';
 import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuthStore } from '@/features/auth/use-auth-store';
+import { DriverLaunchSplash } from '@/features/driver/components/driver-launch-splash';
+import { StopTransitOverlay } from '@/features/driver/components/stop-transit-overlay';
 import {
   endShift,
   fetchDriverCampaign,
@@ -439,9 +441,15 @@ function RouteStopsCard({
   const activeCount = items.filter(i => !i.skipped).length;
   const allDone = activeCount > 0 && items.filter(i => !i.skipped).every(i => i.done);
 
+  const [transitTo, setTransitTo] = React.useState<RouteStop | null>(null);
+  const handleTransitDismiss = React.useCallback(() => setTransitTo(null), []);
+
   function markDone(idx: number) {
     const item = items[idx];
     setItems(prev => prev.map((it, i) => (i === idx ? { ...it, done: true } : it)));
+    // find next active stop
+    const nextStop = items.slice(idx + 1).find(it => !it.done && !it.skipped);
+    setTransitTo(nextStop?.stop ?? null);
     if (shiftId && item) {
       completeStop(shiftId, item.stop.id).catch(() => {
         showMessage({ message: 'Stop synced locally — will retry on reconnect', type: 'warning' });
@@ -516,6 +524,11 @@ function RouteStopsCard({
           onPhoto={() => openUploadForStop(item.stop)}
         />
       ))}
+      <StopTransitOverlay
+        visible={transitTo !== null}
+        nextStopName={transitTo?.venue_name ?? null}
+        onDismiss={handleTransitDismiss}
+      />
     </MotiView>
   );
 }
@@ -554,6 +567,8 @@ export function CampaignScreen() {
   const router = useRouter();
   const profile = useAuthStore.use.profile();
   const signOut = useAuthStore.use.signOut();
+  const [showSplash, setShowSplash] = React.useState(true);
+  const handleSplashDone = React.useCallback(() => setShowSplash(false), []);
 
   const { data: campaign, isLoading, error } = useQuery({
     queryKey: ['driver-campaign', profile?.id],
@@ -578,6 +593,10 @@ export function CampaignScreen() {
 
   if (error || !campaign) {
     return <EmptyCampaignState onSignOut={signOut} />;
+  }
+
+  if (showSplash) {
+    return <DriverLaunchSplash onDone={handleSplashDone} />;
   }
 
   return (

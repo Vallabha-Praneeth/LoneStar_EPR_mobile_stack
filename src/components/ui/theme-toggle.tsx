@@ -46,7 +46,7 @@ export function ThemeToggle() {
       accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       accessibilityRole="button"
     >
-      <ToggleSwitchAnimation width={52} height={30} riveRef={riveRef} />
+      <ToggleSwitchAnimation width={72} height={42} riveRef={riveRef} />
     </TouchableOpacity>
   );
 }

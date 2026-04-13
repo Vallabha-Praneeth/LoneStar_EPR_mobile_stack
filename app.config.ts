@@ -48,6 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: Env.EXPO_PUBLIC_BUNDLE_ID,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSLocationWhenInUseUsageDescription: 'AdTruck uses your location to detect if you are moving between stops.',
     },
   },
   experiments: {
@@ -112,6 +113,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-localization',
+    'expo-location',
     'expo-router',
     [
       'expo-image-picker',

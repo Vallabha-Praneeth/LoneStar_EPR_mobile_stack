@@ -6,6 +6,7 @@ export type ClientCampaignRow = {
   campaign_date: string;
   status: 'draft' | 'pending' | 'active' | 'completed';
   photo_count: number;
+  hasActiveShift: boolean;
 };
 
 export type ClientPhotoRow = {
@@ -17,7 +18,7 @@ export type ClientPhotoRow = {
 export async function fetchClientCampaigns(clientId: string): Promise<ClientCampaignRow[]> {
   const { data, error } = await supabase
     .from('campaigns')
-    .select('id, title, campaign_date, status, campaign_photos(id)')
+    .select('id, title, campaign_date, status, campaign_photos(id), driver_shifts(id, ended_at)')
     .eq('client_id', clientId)
     .order('campaign_date', { ascending: false });
 
@@ -30,6 +31,7 @@ export async function fetchClientCampaigns(clientId: string): Promise<ClientCamp
     campaign_date: row.campaign_date,
     status: row.status,
     photo_count: Array.isArray(row.campaign_photos) ? row.campaign_photos.length : 0,
+    hasActiveShift: (row.driver_shifts ?? []).some((s: { ended_at: string | null }) => !s.ended_at),
   }));
 }
 
