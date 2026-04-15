@@ -1,5 +1,5 @@
 import type { DriverCampaignData, PastCampaignRow, RouteStop } from '@/lib/api/driver/campaign';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { GeoJSONSource, Layer, Marker, Camera as MLCamera, Map as MLMap } from '@maplibre/maplibre-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
@@ -26,12 +26,38 @@ import {
   startShift,
 } from '@/lib/api/driver/campaign';
 import { completeStop } from '@/lib/api/driver/photos';
+import {
+  getLastKnownTrackingCoordForShift,
+  startShiftTracking,
+  stopShiftTracking,
+} from '@/lib/background-location';
+import { buildRouteSimulationPoints, startRouteSimulation } from '@/lib/dev/route-simulator';
 import { motionTokens } from '@/lib/motion/tokens';
 import { useDriverPositionPublisher } from '@/lib/realtime/driver-location';
 
-MapLibreGL.setAccessToken(null);
-
 const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const DEV_ROUTE_SIMULATION_ENABLED = __DEV__ && process.env.EXPO_PUBLIC_DRIVER_ROUTE_SIMULATION === '1';
+
+/**
+ * Ref-shaped guard (module scope) so it survives `CampaignScreen` remounts.
+ * After a failed `endShift`, blocks `startShiftTracking` for that shift id until
+ * a successful end clears it, or until there is no active shift id in data.
+ */
+const trackingStoppedOnErrorRef = {
+  current: false,
+  shiftId: null as string | null,
+};
+function blockTrackingForShift(shiftId: string): void {
+  trackingStoppedOnErrorRef.current = true;
+  trackingStoppedOnErrorRef.shiftId = shiftId;
+}
+function clearTrackingBlock(): void {
+  trackingStoppedOnErrorRef.current = false;
+  trackingStoppedOnErrorRef.shiftId = null;
+}
+function isTrackingBlockedFor(shiftId: string): boolean {
+  return trackingStoppedOnErrorRef.current && trackingStoppedOnErrorRef.shiftId === shiftId;
+}
 
 type CampaignPhoto = DriverCampaignData['campaign_photos'][number];
 
@@ -396,51 +422,55 @@ function RouteMapCard({
         transition={{ type: 'timing', duration: motionTokens.duration.base, delay: 180 }}
         style={{ borderRadius: 16, overflow: 'hidden' }}
       >
-        <MapLibreGL.MapView
+        <MLMap
           style={mapStyles.map}
           mapStyle={MAP_STYLE_URL}
-          logoEnabled={false}
-          attributionEnabled={false}
-          scrollEnabled={false}
-          zoomEnabled={false}
+          logo={false}
+          attribution={false}
+          dragPan={false}
+          touchZoom={false}
+          doubleTapZoom={false}
         >
-          <MapLibreGL.Camera
-            centerCoordinate={[centerLng, centerLat]}
-            zoomLevel={12}
+          <MLCamera
+            center={[centerLng, centerLat]}
+            zoom={12}
           />
-          <MapLibreGL.ShapeSource id="route-line-source" shape={lineGeoJson}>
-            <MapLibreGL.LineLayer
+          <GeoJSONSource id="route-line-source" data={lineGeoJson}>
+            <Layer
               id="route-line"
-              style={{ lineColor: '#3b82f6', lineWidth: 2, lineDasharray: [4, 2] }}
+              type="line"
+              paint={{ 'line-color': '#3b82f6', 'line-width': 2, 'line-dasharray': [4, 2] }}
             />
-          </MapLibreGL.ShapeSource>
+          </GeoJSONSource>
           {stopsWithCoords.map((stop, i) => (
-            <MapLibreGL.PointAnnotation
+            <Marker
               key={stop.id}
               id={`stop-${i}`}
-              coordinate={[stop.longitude!, stop.latitude!]}
+              lngLat={[stop.longitude!, stop.latitude!]}
             >
               <View style={mapStyles.markerDot}>
                 <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
                   {i + 1}
                 </Text>
               </View>
-            </MapLibreGL.PointAnnotation>
+            </Marker>
           ))}
           {driverCoord != null
             ? (
-                <MapLibreGL.PointAnnotation id="driver-pos" coordinate={driverCoord}>
-                  <MotiView
-                    from={{ scale: 1, opacity: 0.5 }}
-                    animate={{ scale: 1.8, opacity: 0 }}
-                    transition={{ type: 'timing', duration: 1100, loop: true }}
-                    style={[mapStyles.driverDot, { position: 'absolute' }]}
-                  />
-                  <View style={mapStyles.driverDot} />
-                </MapLibreGL.PointAnnotation>
+                <Marker id="driver-pos" lngLat={driverCoord}>
+                  <View style={{ width: 16, height: 16 }}>
+                    <MotiView
+                      from={{ scale: 1, opacity: 0.5 }}
+                      animate={{ scale: 1.8, opacity: 0 }}
+                      transition={{ type: 'timing', duration: 1100, loop: true }}
+                      style={[mapStyles.driverDot, { position: 'absolute' }]}
+                    />
+                    <View style={mapStyles.driverDot} />
+                  </View>
+                </Marker>
               )
             : null}
-        </MapLibreGL.MapView>
+        </MLMap>
       </MotiView>
     </>
   );
@@ -545,13 +575,15 @@ function StopRow({
 function RouteStopsCard({
   stops,
   shiftId,
+  completedStopIds,
 }: {
   stops: RouteStop[];
   shiftId: string | undefined;
+  completedStopIds: string[];
 }) {
   const router = useRouter();
   const [items, setItems] = React.useState<StopState[]>(
-    () => stops.map(s => ({ stop: s, done: false, skipped: false })),
+    () => stops.map(s => ({ stop: s, done: completedStopIds.includes(s.id), skipped: false })),
   );
 
   const doneCount = items.filter(i => i.done).length;
@@ -670,11 +702,30 @@ function useShiftMutations(campaign: Awaited<ReturnType<typeof fetchDriverCampai
       return endShift(active!.id);
     },
     onSuccess: async () => {
+      clearTrackingBlock();
+      // Stop background location ONLY here — never in a useEffect cleanup,
+      // which fires on any unmount (e.g. navigating to upload screen mid-shift).
+      await stopShiftTracking();
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
       showMessage({ message: 'Shift ended. Good work!', type: 'success' });
       await signOut();
     },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
+    onError: async (err: Error) => {
+      // Server failed to record shift end — still stop local tracking/MMKV so we
+      // never broadcast with a stale active_shift_id. User can tap End Shift again.
+      const openShift = campaign!.driver_shifts.find(s => !s.ended_at);
+      if (openShift?.id)
+        blockTrackingForShift(openShift.id);
+      await stopShiftTracking().catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
+      showMessage({
+        message: 'Could not end shift on server',
+        description:
+          `${err.message}\n\nLocation tracking was stopped on this device. Tap End Shift again to retry.`,
+        type: 'danger',
+        duration: 12000,
+      });
+    },
   });
 
   return { startMutation, endMutation };
@@ -691,6 +742,7 @@ type ActiveCampaignProps = {
   isEndPending: boolean;
   recentPhotos: CampaignPhoto[];
   profileId: string | undefined;
+  completedStopIds: string[];
 };
 
 function ActiveCampaignView({
@@ -704,6 +756,7 @@ function ActiveCampaignView({
   isEndPending,
   recentPhotos,
   profileId,
+  completedStopIds,
 }: ActiveCampaignProps) {
   const router = useRouter();
   return (
@@ -772,7 +825,7 @@ function ActiveCampaignView({
             )
           : null}
         {campaign.routes?.route_stops && campaign.routes.route_stops.length > 0
-          ? <RouteStopsCard stops={campaign.routes.route_stops} shiftId={activeShift?.id} />
+          ? <RouteStopsCard stops={campaign.routes.route_stops} shiftId={activeShift?.id} completedStopIds={completedStopIds} />
           : null}
         {recentPhotos.length > 0 ? <RecentUploadsList photos={recentPhotos} /> : null}
         {profileId ? <PastCampaignsAccordion driverId={profileId} /> : null}
@@ -781,13 +834,28 @@ function ActiveCampaignView({
   );
 }
 
+function useDevRouteSimulation(
+  campaign: Awaited<ReturnType<typeof fetchDriverCampaign>>,
+  activeShiftId: string | undefined,
+  setDriverCoord: React.Dispatch<React.SetStateAction<[number, number] | null>>,
+): void {
+  const simulationPoints = React.useMemo(
+    () => buildRouteSimulationPoints(campaign?.routes?.route_stops ?? []),
+    [campaign?.routes?.route_stops],
+  );
+  React.useEffect(() => {
+    if (!DEV_ROUTE_SIMULATION_ENABLED || simulationPoints.length < 2 || !activeShiftId)
+      return;
+    return startRouteSimulation(simulationPoints, setDriverCoord, { stepMs: 2500, loop: true });
+  }, [activeShiftId, setDriverCoord, simulationPoints]);
+}
+
 export function CampaignScreen() {
   const profile = useAuthStore.use.profile();
   const signOut = useAuthStore.use.signOut();
   const [showSplash, setShowSplash] = React.useState(true);
   const handleSplashDone = React.useCallback(() => setShowSplash(false), []);
   const [driverCoord, setDriverCoord] = React.useState<[number, number] | null>(null);
-
   const { data: campaign, isLoading, error } = useQuery({
     queryKey: ['driver-campaign', profile?.id],
     queryFn: () => fetchDriverCampaign(profile!.id),
@@ -795,24 +863,69 @@ export function CampaignScreen() {
   });
 
   const { startMutation, endMutation } = useShiftMutations(campaign ?? null);
-
   const activeShift = campaign?.driver_shifts.find(s => !s.ended_at);
-
-  useDriverPositionPublisher(activeShift?.id, driverCoord);
-
+  const activeShiftId = activeShift?.id;
+  const completedStopIds = activeShift?.shift_stop_completions.map(c => c.stop_id) ?? [];
+  useDevRouteSimulation(campaign ?? null, activeShiftId, setDriverCoord);
+  useDriverPositionPublisher(activeShiftId, driverCoord);
   React.useEffect(() => {
-    if (!activeShift)
+    if (!activeShiftId) {
+      clearTrackingBlock();
       return;
+    }
+    const cached = getLastKnownTrackingCoordForShift(activeShiftId);
+    if (cached)
+      setDriverCoord(cached.coord);
     let sub: Location.LocationSubscription | null = null;
-    Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 10 },
-      pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
-    ).then((s) => { sub = s; });
+    const startWatcher = async () => {
+      try {
+        // Request foreground permission first (required before background on Android)
+        const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+        if (fgStatus !== 'granted')
+          return;
+
+        // On Android emulator (API 36) FusedLocationProvider blocks watchPositionAsync
+        // with "too close" even across large distances. Priming with getCurrentPositionAsync
+        // wakes the provider; distanceInterval 0 removes the "too close" filter.
+        if (__DEV__)
+          await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => {});
+
+        // Foreground watcher — drives the map dot while the app is visible
+        sub = await Location.watchPositionAsync(
+          {
+            accuracy: __DEV__ ? Location.Accuracy.High : Location.Accuracy.Balanced,
+            timeInterval: 5000,
+            distanceInterval: __DEV__ ? 0 : 10,
+          },
+          pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
+        );
+
+        // Request background permission (Android 10+ requires a separate prompt
+        // after foreground is granted; iOS handles it via NSLocationAlwaysAndWhenInUse)
+        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (bgStatus !== 'granted') {
+          // Foreground tracking still works — background broadcast won't fire
+          return;
+        }
+
+        // Start background location task (no-op if already running from a
+        // previous session where the driver backgrounded without ending the shift).
+        // Skip restart after a failed endShift for this shift until retry succeeds.
+        if (!isTrackingBlockedFor(activeShiftId))
+          await startShiftTracking(activeShiftId);
+      }
+      catch {
+        // Location unavailable (emulator, permissions denied, etc.) — silent fail
+      }
+    };
+    startWatcher();
+    // Cleanup removes ONLY the foreground subscription.
+    // stopShiftTracking() is deliberately NOT called here — that belongs in
+    // the End Shift onSuccess so the OS task survives component unmounts.
     return () => {
       sub?.remove();
     };
-  }, [activeShift]);
-
+  }, [activeShiftId]);
   const recentPhotos = [...(campaign?.campaign_photos ?? [])]
     .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
     .slice(0, 5);
@@ -824,11 +937,9 @@ export function CampaignScreen() {
       </View>
     );
   }
-
   if (error || !campaign) {
     return <EmptyCampaignState onSignOut={signOut} />;
   }
-
   if (showSplash) {
     return <DriverLaunchSplash onDone={handleSplashDone} />;
   }
@@ -845,6 +956,7 @@ export function CampaignScreen() {
       isEndPending={endMutation.isPending}
       recentPhotos={recentPhotos}
       profileId={profile?.id}
+      completedStopIds={completedStopIds}
     />
   );
 }

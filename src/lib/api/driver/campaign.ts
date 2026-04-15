@@ -15,7 +15,7 @@ export type DriverCampaignData = {
   campaign_date: string;
   routes: { name: string; route_stops: RouteStop[] } | null;
   status: 'draft' | 'pending' | 'active' | 'completed';
-  driver_shifts: { id: string; started_at: string; ended_at: string | null }[];
+  driver_shifts: { id: string; started_at: string; ended_at: string | null; shift_stop_completions: { stop_id: string }[] }[];
   campaign_photos: { id: string; submitted_at: string; storage_path: string | null }[];
 };
 
@@ -31,7 +31,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, title, campaign_date, routes ( name, route_stops ( id, stop_order, venue_name, address, latitude, longitude ) ), status, driver_shifts ( id, started_at, ended_at ), campaign_photos ( id, submitted_at, storage_path )',
+      'id, title, campaign_date, routes ( name, route_stops ( id, stop_order, venue_name, address, latitude, longitude ) ), status, driver_shifts ( id, started_at, ended_at, shift_stop_completions ( stop_id ) ), campaign_photos ( id, submitted_at, storage_path )',
     )
     .eq('driver_profile_id', driverId)
     .gte('campaign_date', today)
@@ -97,15 +97,29 @@ export async function fetchDriverPastCampaigns(driverId: string): Promise<PastCa
   return data ?? [];
 }
 
-export async function startShift(campaignId: string, driverId: string): Promise<void> {
-  const { error } = await supabase.from('driver_shifts').insert({
-    campaign_id: campaignId,
-    driver_profile_id: driverId,
-    started_at: new Date().toISOString(),
-    shift_status: 'active',
-  });
+/**
+ * Creates a shift row and returns its id.
+ * Uses `.select('id').single()` so callers get the id without a follow-up query.
+ * Requires RLS to allow SELECT on the inserted `driver_shifts` row for the driver
+ * (standard PostgREST “returning representation” pattern).
+ */
+export async function startShift(campaignId: string, driverId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('driver_shifts')
+    .insert({
+      campaign_id: campaignId,
+      driver_profile_id: driverId,
+      started_at: new Date().toISOString(),
+      shift_status: 'active',
+    })
+    .select('id')
+    .single();
+
   if (error)
     throw error;
+  if (!data?.id)
+    throw new Error('Shift started but no id was returned.');
+  return data.id;
 }
 
 export async function endShift(shiftId: string): Promise<void> {

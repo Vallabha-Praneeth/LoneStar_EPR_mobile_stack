@@ -18,8 +18,8 @@ importers:
         specifier: ^5.2.8
         version: 5.2.8(@types/react@19.1.17)(react-native-gesture-handler@2.28.0(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native-reanimated@4.2.2(react-native-worklets@0.7.4(@babel/core@7.28.6)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@maplibre/maplibre-react-native':
-        specifier: ^10.4.2
-        version: 10.4.2(@expo/config-plugins@54.0.4)(@types/geojson@7946.0.16)(@types/react@19.1.17)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+        specifier: 11.0.0-beta.30
+        version: 11.0.0-beta.30(@expo/config-plugins@54.0.4)(@types/geojson@7946.0.16)(@types/react@19.1.17)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@shopify/flash-list':
         specifier: 2.3.0
         version: 2.3.0(@babel/runtime@7.28.6)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -89,6 +89,9 @@ importers:
       expo-system-ui:
         specifier: ~6.0.9
         version: 6.0.9(expo@54.0.33)(react-native-web@0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))
+      expo-task-manager:
+        specifier: ^14.0.9
+        version: 14.0.9(expo@54.0.33)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))
       i18next:
         specifier: ^25.8.0
         version: 25.8.0(typescript@5.9.3)
@@ -1911,14 +1914,25 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@maplibre/maplibre-react-native@10.4.2':
-    resolution: {integrity: sha512-5qAfaEe66eMXyILklm2DMHwyaXwXxsZWVop4BqfU7AyTg13LHAcaMmLJNJ3jPkMtiJvjH2m8ywGnobdIg2I0lg==}
+  '@mapbox/jsonlint-lines-primitives@2.0.2':
+    resolution: {integrity: sha512-rY0o9A5ECsTQRVhv7tL/OyDpGAoUB4tTvLiW1DSzQGq4bvTPhNw1VpSNjDJc5GFZ2XuyOtSWSVN05qOtcD71qQ==}
+    engines: {node: '>= 0.6'}
+
+  '@mapbox/unitbezier@0.0.1':
+    resolution: {integrity: sha512-nMkuDXFv60aBr9soUG5q+GvZYL+2KZHVvsqFCzqnkGEf46U2fvmytHaEVc1/YZbiLn8X+eR3QzX1+dwDO1lxlw==}
+
+  '@maplibre/maplibre-gl-style-spec@24.8.1':
+    resolution: {integrity: sha512-zxa92qF96ZNojLxeAjnaRpjVCy+swoUNJvDhtpC90k7u5F0TMr4GmvNqMKvYrMoPB8d7gRSXbMG1hBbmgESIsw==}
+    hasBin: true
+
+  '@maplibre/maplibre-react-native@11.0.0-beta.30':
+    resolution: {integrity: sha512-WE8WXQJOiCpOIcvssoZLdJtxutetGiuYiZh816C/qSJrbZfSCl9tLBDZgdc2VfRFMs+q/6OrMG8LOc1/A2khrA==}
     peerDependencies:
-      '@expo/config-plugins': '>=7'
+      '@expo/config-plugins': '>=54.0.0'
       '@types/geojson': ^7946.0.0
-      '@types/react': '>=16.6.1'
-      react: '>=16.6.1'
-      react-native: '>=0.59.9'
+      '@types/react': '>=19.1.0'
+      react: '>=19.1.0'
+      react-native: '>=0.80.0'
     peerDependenciesMeta:
       '@expo/config-plugins':
         optional: true
@@ -3795,10 +3809,6 @@ packages:
   date-fns@3.6.0:
     resolution: {integrity: sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww==}
 
-  debounce@2.2.0:
-    resolution: {integrity: sha512-Xks6RUDLZFdz8LIdR6q0MTH44k7FikOmnh5xkSjMig6ch45afc8sjTjRQf3P6ax8dMgcQrYO/AR2RGWURrruqw==}
-    engines: {node: '>=18'}
-
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
     peerDependencies:
@@ -4675,6 +4685,12 @@ packages:
     peerDependenciesMeta:
       react-native-web:
         optional: true
+
+  expo-task-manager@14.0.9:
+    resolution: {integrity: sha512-GKWtXrkedr4XChHfTm5IyTcSfMtCPxzx89y4CMVqKfyfROATibrE/8UI5j7UC/pUOfFoYlQvulQEvECMreYuUA==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
 
   expo-updates-interface@2.0.0:
     resolution: {integrity: sha512-pTzAIufEZdVPKql6iMi5ylVSPqV1qbEopz9G6TSECQmnNde2nwq42PxdFBaUEd8IZJ/fdJLQnOT3m6+XJ5s7jg==}
@@ -5764,6 +5780,9 @@ packages:
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
+
+  json-stringify-pretty-compact@4.0.0:
+    resolution: {integrity: sha512-3CNZ2DnrpByG9Nqj6Xo8vqbjT4F6N+tb4Gb28ESAZjYZ5yqvmc56J+/kuIwkaAMOyblTQhUW7PxMkUb8Q36N3Q==}
 
   json5@1.0.2:
     resolution: {integrity: sha512-g1MWMLBiz8FKi1e4w0UyVL3w+iJceWAFBAaBnnGKOpNa5f8TLktkbre1+s6oICydWAm+HRUGTmI+//xv2hvXYA==}
@@ -7114,6 +7133,9 @@ packages:
   queue@6.0.2:
     resolution: {integrity: sha512-iHZWu+q3IdFZFX36ro/lKBkSvfkztY5Y7HMiPlOUjhupPcG2JMfst2KKEpu5XndviX/3UhFbRngUPNKtgvtZiA==}
 
+  quickselect@3.0.0:
+    resolution: {integrity: sha512-XdjUArbK4Bm5fLLvlm5KpTFOiOThgfWWI4axAZDWg4E/0mKdZyI9tNEfds27qCi1ze/vwTR16kvmmGhRra3c2g==}
+
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
@@ -7509,6 +7531,9 @@ packages:
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
+
+  rw@1.3.3:
+    resolution: {integrity: sha512-PdhdWy89SiZogBLaw42zdeqtRJ//zFd2PgQavcICDUgJT5oW10QCRKbJ6bg4r0/UY2M6BWd5tkxuGFRvCkgfHQ==}
 
   rxjs@6.6.7:
     resolution: {integrity: sha512-hTdwr+7yYNIT5n4AMYp85KA6yw2Va0FLa3Rguvbpa4W3I5xynaBZo41cM3XM+4Q6fRMj3sBYIR1VAmZMXYJvRQ==}
@@ -8024,6 +8049,9 @@ packages:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
 
+  tinyqueue@3.0.0:
+    resolution: {integrity: sha512-gRa9gwYU3ECmQYv3lslts5hxuIa90veaEcxDYuu3QGOIAEM2mOZkVHp48ANJuu1CURtRdHKUBY5Lm1tHV+sD4g==}
+
   tmp@0.0.33:
     resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
     engines: {node: '>=0.6.0'}
@@ -8199,6 +8227,9 @@ packages:
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
+
+  unimodules-app-loader@6.0.8:
+    resolution: {integrity: sha512-fqS8QwT/MC/HAmw1NKCHdzsPA6WaLm0dNmoC5Pz6lL+cDGYeYCNdHMO9fy08aL2ZD7cVkNM0pSR/AoNRe+rslA==}
 
   unique-string@2.0.0:
     resolution: {integrity: sha512-uNaeirEPvpZWSgzwsPGtU2zVSTrn/8L5q/IexZmH0eH6SA73CmAA5U4GwORTxQAZs95TAXLNqeLoPPNO5gZfWg==}
@@ -10710,13 +10741,27 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@maplibre/maplibre-react-native@10.4.2(@expo/config-plugins@54.0.4)(@types/geojson@7946.0.16)(@types/react@19.1.17)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
+  '@mapbox/jsonlint-lines-primitives@2.0.2': {}
+
+  '@mapbox/unitbezier@0.0.1': {}
+
+  '@maplibre/maplibre-gl-style-spec@24.8.1':
     dependencies:
+      '@mapbox/jsonlint-lines-primitives': 2.0.2
+      '@mapbox/unitbezier': 0.0.1
+      json-stringify-pretty-compact: 4.0.0
+      minimist: 1.2.8
+      quickselect: 3.0.0
+      rw: 1.3.3
+      tinyqueue: 3.0.0
+
+  '@maplibre/maplibre-react-native@11.0.0-beta.30(@expo/config-plugins@54.0.4)(@types/geojson@7946.0.16)(@types/react@19.1.17)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@maplibre/maplibre-gl-style-spec': 24.8.1
       '@turf/distance': 7.3.4
       '@turf/helpers': 7.3.4
       '@turf/length': 7.3.4
       '@turf/nearest-point-on-line': 7.3.4
-      debounce: 2.2.0
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0)
     optionalDependencies:
@@ -12706,8 +12751,6 @@ snapshots:
 
   date-fns@3.6.0: {}
 
-  debounce@2.2.0: {}
-
   debug@2.6.9:
     dependencies:
       ms: 2.0.0
@@ -13820,6 +13863,12 @@ snapshots:
       react-native-web: 0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
     transitivePeerDependencies:
       - supports-color
+
+  expo-task-manager@14.0.9(expo@54.0.33)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0)):
+    dependencies:
+      expo: 54.0.33(@babel/core@7.28.6)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react-native: 0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0)
+      unimodules-app-loader: 6.0.8
 
   expo-updates-interface@2.0.0(expo@54.0.33):
     dependencies:
@@ -15173,6 +15222,8 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
+
+  json-stringify-pretty-compact@4.0.0: {}
 
   json5@1.0.2:
     dependencies:
@@ -16742,6 +16793,8 @@ snapshots:
     dependencies:
       inherits: 2.0.4
 
+  quickselect@3.0.0: {}
+
   range-parser@1.2.1: {}
 
   rc@1.2.8:
@@ -17181,6 +17234,8 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  rw@1.3.3: {}
 
   rxjs@6.6.7:
     dependencies:
@@ -17692,6 +17747,8 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
 
+  tinyqueue@3.0.0: {}
+
   tmp@0.0.33:
     dependencies:
       os-tmpdir: 1.0.2
@@ -17859,6 +17916,8 @@ snapshots:
   unicorn-magic@0.1.0: {}
 
   unicorn-magic@0.3.0: {}
+
+  unimodules-app-loader@6.0.8: {}
 
   unique-string@2.0.0:
     dependencies:

@@ -1,25 +1,24 @@
 import type { CampaignDetail } from '@/lib/api/admin/campaigns';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { Camera, Map, Marker } from '@maplibre/maplibre-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
+import { ActivityIndicator, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { CampaignStageProgress } from '@/components/campaign-stage-progress';
 import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import { InfoCard } from '@/components/info-card';
-import { ApproveUnlockAnimation, CampaignMilestoneAnimation } from '@/components/motion';
+import { ApproveUnlockAnimation, CampaignMilestoneAnimation, CampaignProgressAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
 import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
-import { useDriverPositionSubscriber } from '@/lib/realtime/driver-location';
-
-MapLibreGL.setAccessToken(null);
+import { useDriverPositionSubscriberSnapshot } from '@/lib/realtime/driver-location';
+import { useSmoothedLiveCoord } from '@/lib/realtime/live-map-motion';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
@@ -29,25 +28,40 @@ const liveMapStyles = StyleSheet.create({
 });
 
 function LiveDriverCard({ shiftId }: { shiftId: string }) {
-  const coord = useDriverPositionSubscriber(shiftId);
+  const snapshot = useDriverPositionSubscriberSnapshot(shiftId);
+  const coord = useSmoothedLiveCoord(snapshot);
+  const [now, setNow] = React.useState(Date.now);
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  const isStale = snapshot != null && now - snapshot.ts > 60_000;
   return (
     <View className="gap-2">
       <DriverTransitBadge />
       {coord != null
         ? (
-            <MapLibreGL.MapView
-              style={liveMapStyles.map}
-              mapStyle={MAP_STYLE}
-              logoEnabled={false}
-              attributionEnabled={false}
-              scrollEnabled={false}
-              zoomEnabled={false}
-            >
-              <MapLibreGL.Camera centerCoordinate={coord} zoomLevel={14} animationDuration={300} />
-              <MapLibreGL.PointAnnotation id="live-driver" coordinate={coord}>
-                <View style={liveMapStyles.dot} />
-              </MapLibreGL.PointAnnotation>
-            </MapLibreGL.MapView>
+            <>
+              <Map
+                style={liveMapStyles.map}
+                mapStyle={MAP_STYLE}
+                logo={false}
+                attribution={false}
+                dragPan={false}
+                touchZoom={false}
+                doubleTapZoom={false}
+              >
+                <Camera center={coord} zoom={14} duration={300} />
+                <Marker id="live-driver" lngLat={coord}>
+                  <View style={liveMapStyles.dot} />
+                </Marker>
+              </Map>
+              {isStale && (
+                <Text className="text-xs text-amber-500">
+                  {`Last seen ${format(new Date(snapshot!.ts), 'h:mm a')}`}
+                </Text>
+              )}
+            </>
           )
         : (
             <Text className="text-xs text-neutral-400">Waiting for driver location…</Text>
@@ -59,16 +73,21 @@ function LiveDriverCard({ shiftId }: { shiftId: string }) {
 function PhotosSectionHeader({ status, photoCount }: { status: string; photoCount: number }) {
   return (
     <>
-      <View className="mt-3">
-        <CampaignStageProgress status={status} />
-      </View>
       {status === 'completed' && (
         <View className="mt-2 items-center">
           <CampaignMilestoneAnimation size={90} />
         </View>
       )}
-      <View className="mt-3 flex-row items-center gap-2">
+      <View className="mt-3 items-center">
+        <CampaignProgressAnimation width={280} height={64} />
+      </View>
+      <View className="mt-1 flex-row items-center gap-3">
         <ApproveUnlockAnimation size={24} />
+        <View className="flex-1">
+          <CampaignStageProgress status={status} showProgressBar={false} />
+        </View>
+      </View>
+      <View className="mt-2">
         <Text className="text-sm font-semibold">
           Photos (
           {photoCount}
@@ -98,7 +117,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
 
       <View className="flex-row gap-3">
         <View className="flex-1">
-          <InfoCard icon={<User color="#737373" width={16} height={16} />} label="Client" value={campaign.clients?.name ?? 'No client'} />
+          <InfoCard icon={<User color="#9A7B45" width={16} height={16} />} label="Client" value={campaign.clients?.name ?? 'No client'} />
         </View>
         <View className="flex-1">
           {campaign.driver_profile_id
@@ -137,14 +156,14 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
           {campaign.campaign_costs.map(cost => (
             <View key={cost.id} className="flex-row gap-3">
               <View className="flex-1">
-                <InfoCard icon={<DollarSign color="#737373" width={16} height={16} />} label={cost.cost_types?.name ?? 'Cost'} value={`$${cost.amount}`} />
+                <InfoCard icon={<DollarSign color="#9A7B45" width={16} height={16} />} label={cost.cost_types?.name ?? 'Cost'} value={`$${cost.amount}`} />
               </View>
             </View>
           ))}
         </View>
       )}
 
-      <InfoCard icon={<DollarSign color="#737373" width={16} height={16} />} label="Total Cost" value={`$${totalCost}`} />
+      <InfoCard icon={<DollarSign color="#9A7B45" width={16} height={16} />} label="Total Cost" value={`$${totalCost}`} />
 
       {campaign.internal_notes && (
         <Card className="rounded-xl p-4">

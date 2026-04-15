@@ -5,9 +5,15 @@ import { supabase } from '@/lib/supabase';
 // [longitude, latitude] — MapLibre coordinate order
 export type Coord = [number, number];
 
-type LocationPayload = { lat: number; lng: number; ts: number };
+export type DriverLocationPayload = { lat: number; lng: number; ts: number };
+export type DriverPositionSnapshot = { coord: Coord; ts: number };
 
 const PUBLISH_INTERVAL_MS = 10_000; // broadcast at most every 10 s
+const SUBSCRIBER_DEDUP_WINDOW_MS = 5_000;
+
+export function driverPositionChannelName(shiftId: string): string {
+  return `driver-position:${shiftId}`;
+}
 
 /**
  * Publishes the driver's live position to a Supabase Broadcast channel.
@@ -25,7 +31,7 @@ export function useDriverPositionPublisher(
   React.useEffect(() => {
     if (!shiftId)
       return;
-    const ch = supabase.channel(`driver-position:${shiftId}`);
+    const ch = supabase.channel(driverPositionChannelName(shiftId));
     ch.subscribe();
     channelRef.current = ch;
     return () => {
@@ -41,7 +47,7 @@ export function useDriverPositionPublisher(
     if (now - lastPublishRef.current < PUBLISH_INTERVAL_MS)
       return;
     lastPublishRef.current = now;
-    const payload: LocationPayload = { lat: coord[1], lng: coord[0], ts: now };
+    const payload: DriverLocationPayload = { lat: coord[1], lng: coord[0], ts: now };
     channelRef.current.send({ type: 'broadcast', event: 'location', payload });
   }, [coord]);
 }
@@ -49,20 +55,33 @@ export function useDriverPositionPublisher(
 /**
  * Subscribes to live driver position broadcasts for a given shift.
  * Returns null until the first location message arrives or when shiftId is absent.
- * Used on admin campaign detail and client campaign detail screens.
+ * Includes timestamp so consumers can reason about freshness.
  */
-export function useDriverPositionSubscriber(shiftId: string | null | undefined): Coord | null {
-  const [coord, setCoord] = React.useState<Coord | null>(null);
+export function useDriverPositionSubscriberSnapshot(
+  shiftId: string | null | undefined,
+): DriverPositionSnapshot | null {
+  const [snapshot, setSnapshot] = React.useState<DriverPositionSnapshot | null>(null);
 
   React.useEffect(() => {
     if (!shiftId) {
-      setCoord(null);
+      setSnapshot(null);
       return;
     }
     const ch = supabase
-      .channel(`driver-position:${shiftId}`)
-      .on('broadcast', { event: 'location' }, ({ payload }: { payload: LocationPayload }) => {
-        setCoord([payload.lng, payload.lat]);
+      .channel(driverPositionChannelName(shiftId))
+      .on('broadcast', { event: 'location' }, ({ payload }: { payload: DriverLocationPayload }) => {
+        const next: DriverPositionSnapshot = {
+          coord: [payload.lng, payload.lat],
+          ts: payload.ts,
+        };
+        setSnapshot((prev) => {
+          if (!prev)
+            return next;
+          const sameCoord = prev.coord[0] === next.coord[0] && prev.coord[1] === next.coord[1];
+          if (sameCoord && next.ts - prev.ts < SUBSCRIBER_DEDUP_WINDOW_MS)
+            return prev;
+          return next;
+        });
       })
       .subscribe();
     return () => {
@@ -70,5 +89,14 @@ export function useDriverPositionSubscriber(shiftId: string | null | undefined):
     };
   }, [shiftId]);
 
-  return coord;
+  return snapshot;
+}
+
+/**
+ * Backward-compatible subscriber returning only coordinate.
+ * Prefer `useDriverPositionSubscriberSnapshot` for timestamp-aware consumers.
+ */
+export function useDriverPositionSubscriber(shiftId: string | null | undefined): Coord | null {
+  const snapshot = useDriverPositionSubscriberSnapshot(shiftId);
+  return snapshot?.coord ?? null;
 }
