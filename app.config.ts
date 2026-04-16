@@ -27,6 +27,7 @@ const appIconBadgeConfig: AppIconBadgeConfig = {
   ],
 };
 
+// eslint-disable-next-line max-lines-per-function
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: Env.EXPO_PUBLIC_NAME,
@@ -48,7 +49,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: Env.EXPO_PUBLIC_BUNDLE_ID,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      NSLocationWhenInUseUsageDescription: 'AdTruck uses your location to detect if you are moving between stops.',
+      NSLocationWhenInUseUsageDescription: 'AdTruck uses your location to show your position on the route map.',
+      NSLocationAlwaysAndWhenInUseUsageDescription: 'AdTruck continues tracking your location in the background so your position is visible to the admin during your shift.',
+      UIBackgroundModes: ['location'],
     },
   },
   experiments: {
@@ -113,7 +116,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-localization',
-    'expo-location',
+    [
+      'expo-location',
+      {
+        locationAlwaysAndWhenInUsePermission: 'AdTruck continues tracking your location in the background so your position is visible to the admin during your shift.',
+        isAndroidBackgroundLocationEnabled: true,
+      },
+    ],
     '@maplibre/maplibre-react-native',
     'expo-router',
     [

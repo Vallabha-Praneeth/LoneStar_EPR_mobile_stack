@@ -14,6 +14,10 @@ import { hydrateAuth } from '@/features/auth/use-auth-store';
 
 import { APIProvider } from '@/lib/api';
 import { loadSelectedTheme } from '@/lib/hooks/use-selected-theme';
+// TaskManager.defineTask must execute at app startup before the OS can ever
+// launch the background task. Importing here (module top-level, before any
+// component renders) guarantees that. Do not move or lazy-import this.
+import '@/lib/background-location';
 // Import  global CSS file
 import '../global.css';
 

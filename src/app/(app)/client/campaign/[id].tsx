@@ -1,5 +1,5 @@
 import type { ClientCampaignRow, ClientPhotoRow } from '@/lib/api/client/campaigns';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { Camera, Map, Marker } from '@maplibre/maplibre-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
@@ -7,14 +7,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CampaignStageProgress } from '@/components/campaign-stage-progress';
 import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import { SpinnerAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { ChevronLeft } from '@/components/ui/icons';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import {
   fetchClientCampaignPhotos,
@@ -22,9 +23,8 @@ import {
   getClientPhotoSignedUrl,
 } from '@/lib/api/client/campaigns';
 import { motionTokens } from '@/lib/motion/tokens';
-import { useDriverPositionSubscriber } from '@/lib/realtime/driver-location';
-
-MapLibreGL.setAccessToken(null);
+import { useDriverPositionSubscriberSnapshot } from '@/lib/realtime/driver-location';
+import { useSmoothedLiveCoord } from '@/lib/realtime/live-map-motion';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
@@ -34,25 +34,40 @@ const clientMapStyles = StyleSheet.create({
 });
 
 function LiveDriverBanner({ shiftId }: { shiftId: string }) {
-  const coord = useDriverPositionSubscriber(shiftId);
+  const snapshot = useDriverPositionSubscriberSnapshot(shiftId);
+  const coord = useSmoothedLiveCoord(snapshot);
+  const [now, setNow] = React.useState(Date.now);
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  const isStale = snapshot != null && now - snapshot.ts > 60_000;
   return (
     <View className="gap-2 border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800">
       <DriverTransitBadge />
       {coord != null
         ? (
-            <MapLibreGL.MapView
-              style={clientMapStyles.map}
-              mapStyle={MAP_STYLE}
-              logoEnabled={false}
-              attributionEnabled={false}
-              scrollEnabled={false}
-              zoomEnabled={false}
-            >
-              <MapLibreGL.Camera centerCoordinate={coord} zoomLevel={14} animationDuration={300} />
-              <MapLibreGL.PointAnnotation id="client-driver" coordinate={coord}>
-                <View style={clientMapStyles.dot} />
-              </MapLibreGL.PointAnnotation>
-            </MapLibreGL.MapView>
+            <>
+              <Map
+                style={clientMapStyles.map}
+                mapStyle={MAP_STYLE}
+                logo={false}
+                attribution={false}
+                dragPan={false}
+                touchZoom={false}
+                doubleTapZoom={false}
+              >
+                <Camera center={coord} zoom={14} duration={300} />
+                <Marker id="client-driver" lngLat={coord}>
+                  <View style={clientMapStyles.dot} />
+                </Marker>
+              </Map>
+              {isStale && (
+                <Text className="text-xs text-amber-500">
+                  {`Last seen ${format(new Date(snapshot!.ts), 'h:mm a')}`}
+                </Text>
+              )}
+            </>
           )
         : (
             <Text className="text-xs text-neutral-400">Tracking driver location…</Text>
@@ -146,6 +161,7 @@ export default function CampaignPhotosScreen() {
               </Text>
             )}
           </View>
+          <ThemeToggle />
           {campaign && <StatusBadge status={campaign.status} />}
         </View>
       </MotiView>

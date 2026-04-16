@@ -1,5 +1,5 @@
 import type { DriverCampaignData, PastCampaignRow, RouteStop } from '@/lib/api/driver/campaign';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { GeoJSONSource, Layer, Marker, Camera as MLCamera, Map as MLMap } from '@maplibre/maplibre-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
@@ -26,14 +26,47 @@ import {
   startShift,
 } from '@/lib/api/driver/campaign';
 import { completeStop } from '@/lib/api/driver/photos';
+import {
+  getLastKnownTrackingCoordForShift,
+  startShiftTracking,
+  stopShiftTracking,
+} from '@/lib/background-location';
+import { buildRouteSimulationPoints, startRouteSimulation } from '@/lib/dev/route-simulator';
+import { haversineMeters } from '@/lib/geo/haversine';
 import { motionTokens } from '@/lib/motion/tokens';
 import { useDriverPositionPublisher } from '@/lib/realtime/driver-location';
 
-MapLibreGL.setAccessToken(null);
-
 const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const DEV_ROUTE_SIMULATION_ENABLED = __DEV__ && process.env.EXPO_PUBLIC_DRIVER_ROUTE_SIMULATION === '1';
+
+/**
+ * Ref-shaped guard (module scope) so it survives `CampaignScreen` remounts.
+ * After a failed `endShift`, blocks `startShiftTracking` for that shift id until
+ * a successful end clears it, or until there is no active shift id in data.
+ */
+const trackingStoppedOnErrorRef = {
+  current: false,
+  shiftId: null as string | null,
+};
+function blockTrackingForShift(shiftId: string): void {
+  trackingStoppedOnErrorRef.current = true;
+  trackingStoppedOnErrorRef.shiftId = shiftId;
+}
+function clearTrackingBlock(): void {
+  trackingStoppedOnErrorRef.current = false;
+  trackingStoppedOnErrorRef.shiftId = null;
+}
+function isTrackingBlockedFor(shiftId: string): boolean {
+  return trackingStoppedOnErrorRef.current && trackingStoppedOnErrorRef.shiftId === shiftId;
+}
 
 type CampaignPhoto = DriverCampaignData['campaign_photos'][number];
+
+function getRecentPhotos(campaign: DriverCampaignData | null | undefined): CampaignPhoto[] {
+  return [...(campaign?.campaign_photos ?? [])]
+    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+    .slice(0, 5);
+}
 
 function PhotoThumbnail({ storagePath }: { storagePath: string | null }) {
   const { data: uri } = useQuery({
@@ -359,26 +392,62 @@ const mapStyles = StyleSheet.create({
   },
 });
 
+// Tracks the "next pending stop" and flies the map camera to it when it changes.
+// Uses the imperative setCamera() ref API because animationMode/animationDuration
+// are absent from MLCamera's TypeScript props in beta.30.
+function useCameraAdvance(
+  items: StopState[],
+  cameraRef: React.RefObject<any>,
+): [number, number] {
+  const stopsWithCoords = items.filter(it => it.stop.latitude != null && it.stop.longitude != null);
+  const nextStop = items.find(it => !it.done && !it.skipped && it.stop.latitude != null)?.stop ?? null;
+  const nextStopId = nextStop?.id ?? null;
+  const nextStopLng = nextStop?.longitude ?? null;
+  const nextStopLat = nextStop?.latitude ?? null;
+  // Lazy-init used once on mount — stable initial center for MLCamera center prop.
+  const [initialCenter] = React.useState<[number, number]>(() => {
+    if (nextStop)
+      return [nextStop.longitude!, nextStop.latitude!];
+    const n = Math.max(stopsWithCoords.length, 1);
+    return [stopsWithCoords.reduce((s, it) => s + it.stop.longitude!, 0) / n, stopsWithCoords.reduce((s, it) => s + it.stop.latitude!, 0) / n];
+  });
+  const prevId = React.useRef<string | null>(nextStopId);
+  React.useEffect(() => {
+    if (nextStopId == null || nextStopLng == null || nextStopLat == null)
+      return;
+    if (nextStopId !== prevId.current) {
+      prevId.current = nextStopId;
+      cameraRef.current?.setCamera({
+        centerCoordinate: [nextStopLng, nextStopLat],
+        zoomLevel: 12,
+        animationMode: 'flyTo',
+        animationDuration: 800,
+      });
+    }
+  }, [nextStopId, nextStopLng, nextStopLat, cameraRef]);
+  return initialCenter;
+}
+
 function RouteMapCard({
-  stops,
+  items,
   driverCoord,
+  nearbyStopId,
 }: {
-  stops: RouteStop[];
+  items: StopState[];
   driverCoord: [number, number] | null;
+  nearbyStopId: string | null;
 }) {
-  const stopsWithCoords = stops.filter(
-    s => s.latitude != null && s.longitude != null,
+  const cameraRef = React.useRef<any>(null);
+  const initialCenter = useCameraAdvance(items, cameraRef);
+  const stopsWithCoords = items.filter(
+    it => it.stop.latitude != null && it.stop.longitude != null,
   );
 
   if (stopsWithCoords.length < 2)
     return null;
 
-  const sumLat = stopsWithCoords.reduce((acc, s) => acc + s.latitude!, 0);
-  const sumLng = stopsWithCoords.reduce((acc, s) => acc + s.longitude!, 0);
-  const centerLat = sumLat / stopsWithCoords.length;
-  const centerLng = sumLng / stopsWithCoords.length;
-
-  const lineCoords = stopsWithCoords.map(s => [s.longitude!, s.latitude!]);
+  // Line follows current (possibly reordered) sequence, not original DB order.
+  const lineCoords = stopsWithCoords.map(it => [it.stop.longitude!, it.stop.latitude!]);
   const lineGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
     type: 'Feature',
     properties: {},
@@ -396,51 +465,64 @@ function RouteMapCard({
         transition={{ type: 'timing', duration: motionTokens.duration.base, delay: 180 }}
         style={{ borderRadius: 16, overflow: 'hidden' }}
       >
-        <MapLibreGL.MapView
+        <MLMap
           style={mapStyles.map}
           mapStyle={MAP_STYLE_URL}
-          logoEnabled={false}
-          attributionEnabled={false}
-          scrollEnabled={false}
-          zoomEnabled={false}
+          logo={false}
+          attribution={false}
+          dragPan={false}
+          touchZoom={false}
+          doubleTapZoom={false}
         >
-          <MapLibreGL.Camera
-            centerCoordinate={[centerLng, centerLat]}
-            zoomLevel={12}
+          <MLCamera
+            ref={cameraRef}
+            center={initialCenter}
+            zoom={12}
           />
-          <MapLibreGL.ShapeSource id="route-line-source" shape={lineGeoJson}>
-            <MapLibreGL.LineLayer
+          <GeoJSONSource id="route-line-source" data={lineGeoJson}>
+            <Layer
               id="route-line"
-              style={{ lineColor: '#3b82f6', lineWidth: 2, lineDasharray: [4, 2] }}
+              type="line"
+              paint={{ 'line-color': '#3b82f6', 'line-width': 2, 'line-dasharray': [4, 2] }}
             />
-          </MapLibreGL.ShapeSource>
-          {stopsWithCoords.map((stop, i) => (
-            <MapLibreGL.PointAnnotation
-              key={stop.id}
-              id={`stop-${i}`}
-              coordinate={[stop.longitude!, stop.latitude!]}
-            >
-              <View style={mapStyles.markerDot}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
-                  {i + 1}
-                </Text>
-              </View>
-            </MapLibreGL.PointAnnotation>
-          ))}
+          </GeoJSONSource>
+          {stopsWithCoords.map((it, i) => {
+            const { stop, done, skipped } = it;
+            const isNearby = stop.id === nearbyStopId;
+            const bg = done ? '#16a34a' : skipped ? '#a3a3a3' : isNearby ? '#f59e0b' : '#3b82f6';
+            const label = done ? '✓' : skipped ? '×' : String(i + 1);
+            return (
+              <Marker key={stop.id} id={`stop-${i}`} lngLat={[stop.longitude!, stop.latitude!]}>
+                <View style={[mapStyles.markerDot, { backgroundColor: bg }]}>
+                  {isNearby && (
+                    <MotiView
+                      from={{ scale: 1, opacity: 0.6 }}
+                      animate={{ scale: 2, opacity: 0 }}
+                      transition={{ type: 'timing', duration: 1100, loop: true }}
+                      style={[StyleSheet.absoluteFillObject, { borderRadius: 11, backgroundColor: '#f59e0b' }]}
+                    />
+                  )}
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
+                </View>
+              </Marker>
+            );
+          })}
           {driverCoord != null
             ? (
-                <MapLibreGL.PointAnnotation id="driver-pos" coordinate={driverCoord}>
-                  <MotiView
-                    from={{ scale: 1, opacity: 0.5 }}
-                    animate={{ scale: 1.8, opacity: 0 }}
-                    transition={{ type: 'timing', duration: 1100, loop: true }}
-                    style={[mapStyles.driverDot, { position: 'absolute' }]}
-                  />
-                  <View style={mapStyles.driverDot} />
-                </MapLibreGL.PointAnnotation>
+                <Marker id="driver-pos" lngLat={driverCoord}>
+                  <View style={{ width: 16, height: 16 }}>
+                    <MotiView
+                      from={{ scale: 1, opacity: 0.5 }}
+                      animate={{ scale: 1.8, opacity: 0 }}
+                      transition={{ type: 'timing', duration: 1100, loop: true }}
+                      style={[mapStyles.driverDot, { position: 'absolute' }]}
+                    />
+                    <View style={mapStyles.driverDot} />
+                  </View>
+                </Marker>
               )
             : null}
-        </MapLibreGL.MapView>
+        </MLMap>
       </MotiView>
     </>
   );
@@ -542,18 +624,56 @@ function StopRow({
   );
 }
 
-function RouteStopsCard({
-  stops,
-  shiftId,
+// ─── Proximity nudge banner ───────────────────────────────────────
+// Shown when the driver is near a pending stop. Purely informational —
+// the driver can dismiss it or use it as a shortcut to mark done.
+// Nothing is auto-completed; all stops remain freely actionable from the list.
+
+function ProximityNudgeBanner({
+  stopName,
+  onDone,
+  onDismiss,
 }: {
-  stops: RouteStop[];
-  shiftId: string | undefined;
+  stopName: string;
+  onDone: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <MotiView
+      from={{ opacity: 0, translateY: -6 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'timing', duration: 200 }}
+      className="flex-row items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20"
+    >
+      <Text className="flex-1 text-sm font-medium text-amber-800 dark:text-amber-300" numberOfLines={1}>
+        {`Near ${stopName}`}
+      </Text>
+      <TouchableOpacity
+        onPress={onDone}
+        className="rounded-lg bg-green-600 px-3 py-1.5"
+        accessibilityLabel="Mark stop as done"
+      >
+        <Text className="text-xs font-bold text-white">Done</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Text className="text-sm text-amber-600 dark:text-amber-400">✕</Text>
+      </TouchableOpacity>
+    </MotiView>
+  );
+}
+
+function RouteStopsCard({
+  items,
+  onDone,
+  onSkip,
+  onMove,
+}: {
+  items: StopState[];
+  onDone: (idx: number) => void;
+  onSkip: (idx: number) => void;
+  onMove: (idx: number, dir: 'up' | 'down') => void;
 }) {
   const router = useRouter();
-  const [items, setItems] = React.useState<StopState[]>(
-    () => stops.map(s => ({ stop: s, done: false, skipped: false })),
-  );
-
   const doneCount = items.filter(i => i.done).length;
   const activeCount = items.filter(i => !i.skipped).length;
   const allDone = activeCount > 0 && items.filter(i => !i.skipped).every(i => i.done);
@@ -561,32 +681,11 @@ function RouteStopsCard({
   const [transitTo, setTransitTo] = React.useState<RouteStop | null>(null);
   const handleTransitDismiss = React.useCallback(() => setTransitTo(null), []);
 
-  function markDone(idx: number) {
-    const item = items[idx];
-    setItems(prev => prev.map((it, i) => (i === idx ? { ...it, done: true } : it)));
-    // find next active stop
+  function handleDone(idx: number) {
+    // Compute next stop from current items BEFORE onDone triggers parent re-render.
     const nextStop = items.slice(idx + 1).find(it => !it.done && !it.skipped);
+    onDone(idx);
     setTransitTo(nextStop?.stop ?? null);
-    if (shiftId && item) {
-      completeStop(shiftId, item.stop.id).catch(() => {
-        showMessage({ message: 'Stop synced locally — will retry on reconnect', type: 'warning' });
-      });
-    }
-  }
-
-  function markSkip(idx: number) {
-    setItems(prev => prev.map((it, i) => (i === idx ? { ...it, skipped: true } : it)));
-  }
-
-  function moveStop(index: number, dir: 'up' | 'down') {
-    setItems((prev) => {
-      const arr = [...prev];
-      const t = dir === 'up' ? index - 1 : index + 1;
-      if (t < 0 || t >= arr.length)
-        return prev;
-      [arr[index], arr[t]] = [arr[t], arr[index]];
-      return arr;
-    });
   }
 
   function openUploadForStop(stop: RouteStop) {
@@ -635,9 +734,9 @@ function RouteStopsCard({
           item={item}
           index={i}
           total={items.length}
-          onDone={() => markDone(i)}
-          onSkip={() => markSkip(i)}
-          onMove={dir => moveStop(i, dir)}
+          onDone={() => handleDone(i)}
+          onSkip={() => onSkip(i)}
+          onMove={dir => onMove(i, dir)}
           onPhoto={() => openUploadForStop(item.stop)}
         />
       ))}
@@ -670,14 +769,130 @@ function useShiftMutations(campaign: Awaited<ReturnType<typeof fetchDriverCampai
       return endShift(active!.id);
     },
     onSuccess: async () => {
+      clearTrackingBlock();
+      // Stop background location ONLY here — never in a useEffect cleanup,
+      // which fires on any unmount (e.g. navigating to upload screen mid-shift).
+      await stopShiftTracking();
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
       showMessage({ message: 'Shift ended. Good work!', type: 'success' });
       await signOut();
     },
-    onError: (err: Error) => showMessage({ message: err.message, type: 'danger' }),
+    onError: async (err: Error) => {
+      // Server failed to record shift end — still stop local tracking/MMKV so we
+      // never broadcast with a stale active_shift_id. User can tap End Shift again.
+      const openShift = campaign!.driver_shifts.find(s => !s.ended_at);
+      if (openShift?.id)
+        blockTrackingForShift(openShift.id);
+      await stopShiftTracking().catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
+      showMessage({
+        message: 'Could not end shift on server',
+        description:
+          `${err.message}\n\nLocation tracking was stopped on this device. Tap End Shift again to retry.`,
+        type: 'danger',
+        duration: 12000,
+      });
+    },
   });
 
   return { startMutation, endMutation };
+}
+
+// ─── Stop state (lifted out of RouteStopsCard so RouteMapCard can share it) ──
+
+function useStopState(
+  stops: RouteStop[],
+  activeShift: DriverCampaignData['driver_shifts'][number] | undefined,
+  opts: { shiftId: string | undefined; driverCoord: [number, number] | null },
+) {
+  const { shiftId, driverCoord } = opts;
+  const completedStopIds = activeShift?.shift_stop_completions.map(c => c.stop_id) ?? [];
+  const [items, setItems] = React.useState<StopState[]>(
+    () => stops.map(s => ({ stop: s, done: completedStopIds.includes(s.id), skipped: false })),
+  );
+  // Fast path above handles the case where React Query has data in cache at mount.
+  // Seeding effect handles the common case: CampaignScreen mounts during loading
+  // (stops=[]), so the lazy initialiser produces items=[]. When data arrives and
+  // stops becomes non-empty, this effect seeds items exactly once.
+  const seededRef = React.useRef(stops.length > 0);
+  React.useEffect(() => {
+    if (seededRef.current || stops.length === 0)
+      return;
+    seededRef.current = true;
+    const ids = activeShift?.shift_stop_completions.map(c => c.stop_id) ?? [];
+    setItems(stops.map(s => ({ stop: s, done: ids.includes(s.id), skipped: false })));
+  }, [stops, activeShift]);
+  // Ref so markDone always captures the latest GPS position without
+  // needing driverCoord in its closure (avoids stale value on fast taps).
+  const driverCoordRef = React.useRef(driverCoord);
+  React.useEffect(() => {
+    driverCoordRef.current = driverCoord;
+  }, [driverCoord]);
+
+  function markDone(idx: number) {
+    const item = items[idx];
+    setItems(prev => prev.map((it, i) => (i === idx ? { ...it, done: true } : it)));
+    if (shiftId && item) {
+      completeStop(shiftId, item.stop.id, driverCoordRef.current ?? undefined).catch(() => {
+        showMessage({ message: 'Stop synced locally — will retry on reconnect', type: 'warning' });
+      });
+    }
+  }
+
+  function markSkip(idx: number) {
+    setItems(prev => prev.map((it, i) => (i === idx ? { ...it, skipped: true } : it)));
+  }
+
+  function moveStop(index: number, dir: 'up' | 'down') {
+    setItems((prev) => {
+      const arr = [...prev];
+      const t = dir === 'up' ? index - 1 : index + 1;
+      if (t < 0 || t >= arr.length)
+        return prev;
+      [arr[index], arr[t]] = [arr[t], arr[index]];
+      return arr;
+    });
+  }
+
+  return { items, markDone, markSkip, moveStop };
+}
+
+const PROXIMITY_ARRIVAL_M = 150;
+const PROXIMITY_HYSTERESIS_M = 300;
+
+function useProximityNudge(
+  driverCoord: [number, number] | null,
+  items: StopState[],
+): { nearbyStopId: string | null; dismissNudge: (stopId: string) => void } {
+  const [nearbyStopId, setNearbyStopId] = React.useState<string | null>(null);
+  const dismissedRef = React.useRef<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    if (!driverCoord) {
+      setNearbyStopId(null);
+      return;
+    }
+    let found: string | null = null;
+    for (const it of items) {
+      if (it.done || it.skipped || it.stop.latitude == null || it.stop.longitude == null)
+        continue;
+      const dist = haversineMeters(driverCoord, [it.stop.longitude, it.stop.latitude]);
+      if (dist > PROXIMITY_HYSTERESIS_M)
+        dismissedRef.current.delete(it.stop.id);
+      if (dist <= PROXIMITY_ARRIVAL_M && !dismissedRef.current.has(it.stop.id)) {
+        found = it.stop.id;
+        break;
+      }
+    }
+    setNearbyStopId(found);
+  }, [driverCoord, items]);
+
+  const dismissNudge = React.useCallback((stopId: string) => {
+    dismissedRef.current.add(stopId);
+    setNearbyStopId(null);
+  }, []);
+
+  return { nearbyStopId, dismissNudge };
 }
 
 type ActiveCampaignProps = {
@@ -691,6 +906,12 @@ type ActiveCampaignProps = {
   isEndPending: boolean;
   recentPhotos: CampaignPhoto[];
   profileId: string | undefined;
+  items: StopState[];
+  onDone: (idx: number) => void;
+  onSkip: (idx: number) => void;
+  onMove: (idx: number, dir: 'up' | 'down') => void;
+  nearbyStopId: string | null;
+  dismissNudge: (stopId: string) => void;
 };
 
 function ActiveCampaignView({
@@ -704,8 +925,15 @@ function ActiveCampaignView({
   isEndPending,
   recentPhotos,
   profileId,
+  items,
+  onDone,
+  onSkip,
+  onMove,
+  nearbyStopId,
+  dismissNudge,
 }: ActiveCampaignProps) {
   const router = useRouter();
+  const nearbyIdx = nearbyStopId != null ? items.findIndex(it => it.stop.id === nearbyStopId) : -1;
   return (
     <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
@@ -763,22 +991,42 @@ function ActiveCampaignView({
             />
           </View>
         </MotiView>
-        {activeShift && campaign.routes?.route_stops && campaign.routes.route_stops.length >= 2
+        {activeShift != null && nearbyIdx >= 0
           ? (
-              <RouteMapCard
-                stops={campaign.routes.route_stops}
-                driverCoord={driverCoord}
+              <ProximityNudgeBanner
+                stopName={items[nearbyIdx].stop.venue_name}
+                onDone={() => onDone(nearbyIdx)}
+                onDismiss={() => dismissNudge(nearbyStopId!)}
               />
             )
           : null}
-        {campaign.routes?.route_stops && campaign.routes.route_stops.length > 0
-          ? <RouteStopsCard stops={campaign.routes.route_stops} shiftId={activeShift?.id} />
-          : null}
+        {activeShift && items.length >= 2 && (
+          <RouteMapCard items={items} driverCoord={driverCoord} nearbyStopId={nearbyStopId} />
+        )}
+        {items.length > 0 && (
+          <RouteStopsCard items={items} onDone={onDone} onSkip={onSkip} onMove={onMove} />
+        )}
         {recentPhotos.length > 0 ? <RecentUploadsList photos={recentPhotos} /> : null}
         {profileId ? <PastCampaignsAccordion driverId={profileId} /> : null}
       </ScrollView>
     </View>
   );
+}
+
+function useDevRouteSimulation(
+  campaign: Awaited<ReturnType<typeof fetchDriverCampaign>>,
+  activeShiftId: string | undefined,
+  setDriverCoord: React.Dispatch<React.SetStateAction<[number, number] | null>>,
+): void {
+  const simulationPoints = React.useMemo(
+    () => buildRouteSimulationPoints(campaign?.routes?.route_stops ?? []),
+    [campaign?.routes?.route_stops],
+  );
+  React.useEffect(() => {
+    if (!DEV_ROUTE_SIMULATION_ENABLED || simulationPoints.length < 2 || !activeShiftId)
+      return;
+    return startRouteSimulation(simulationPoints, setDriverCoord, { stepMs: 2500, loop: true });
+  }, [activeShiftId, setDriverCoord, simulationPoints]);
 }
 
 export function CampaignScreen() {
@@ -787,7 +1035,6 @@ export function CampaignScreen() {
   const [showSplash, setShowSplash] = React.useState(true);
   const handleSplashDone = React.useCallback(() => setShowSplash(false), []);
   const [driverCoord, setDriverCoord] = React.useState<[number, number] | null>(null);
-
   const { data: campaign, isLoading, error } = useQuery({
     queryKey: ['driver-campaign', profile?.id],
     queryFn: () => fetchDriverCampaign(profile!.id),
@@ -795,40 +1042,77 @@ export function CampaignScreen() {
   });
 
   const { startMutation, endMutation } = useShiftMutations(campaign ?? null);
-
   const activeShift = campaign?.driver_shifts.find(s => !s.ended_at);
-
-  useDriverPositionPublisher(activeShift?.id, driverCoord);
-
+  const activeShiftId = activeShift?.id;
+  const { items, markDone, markSkip, moveStop } = useStopState(campaign?.routes?.route_stops ?? [], activeShift, { shiftId: activeShiftId, driverCoord });
+  const { nearbyStopId, dismissNudge } = useProximityNudge(driverCoord, items);
+  useDevRouteSimulation(campaign ?? null, activeShiftId, setDriverCoord);
+  useDriverPositionPublisher(activeShiftId, driverCoord);
   React.useEffect(() => {
-    if (!activeShift)
+    if (!activeShiftId) {
+      clearTrackingBlock();
       return;
+    }
+    const cached = getLastKnownTrackingCoordForShift(activeShiftId);
+    if (cached)
+      setDriverCoord(cached.coord);
     let sub: Location.LocationSubscription | null = null;
-    Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 10 },
-      pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
-    ).then((s) => { sub = s; });
+    const startWatcher = async () => {
+      try {
+        // Request foreground permission first (required before background on Android)
+        const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+        if (fgStatus !== 'granted')
+          return;
+
+        // On Android emulator (API 36) FusedLocationProvider blocks watchPositionAsync
+        // with "too close" even across large distances. Priming with getCurrentPositionAsync
+        // wakes the provider; distanceInterval 0 removes the "too close" filter.
+        if (__DEV__)
+          await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => {});
+
+        // Foreground watcher — drives the map dot while the app is visible
+        sub = await Location.watchPositionAsync(
+          {
+            accuracy: __DEV__ ? Location.Accuracy.High : Location.Accuracy.Balanced,
+            timeInterval: 5000,
+            distanceInterval: __DEV__ ? 0 : 10,
+          },
+          pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
+        );
+
+        // Request background permission (Android 10+ requires a separate prompt
+        // after foreground is granted; iOS handles it via NSLocationAlwaysAndWhenInUse)
+        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (bgStatus !== 'granted') {
+          // Foreground tracking still works — background broadcast won't fire
+          return;
+        }
+
+        // Start background location task (no-op if already running from a
+        // previous session where the driver backgrounded without ending the shift).
+        // Skip restart after a failed endShift for this shift until retry succeeds.
+        if (!isTrackingBlockedFor(activeShiftId))
+          await startShiftTracking(activeShiftId);
+      }
+      catch {
+        // Location unavailable (emulator, permissions denied, etc.) — silent fail
+      }
+    };
+    startWatcher();
+    // Cleanup removes ONLY the foreground subscription.
+    // stopShiftTracking() is deliberately NOT called here — that belongs in
+    // the End Shift onSuccess so the OS task survives component unmounts.
     return () => {
       sub?.remove();
     };
-  }, [activeShift]);
-
-  const recentPhotos = [...(campaign?.campaign_photos ?? [])]
-    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-    .slice(0, 5);
-
+  }, [activeShiftId]);
+  const recentPhotos = getRecentPhotos(campaign);
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
-        <SpinnerAnimation size={64} />
-      </View>
-    );
+    return <View className="flex-1 items-center justify-center bg-white dark:bg-black"><SpinnerAnimation size={64} /></View>;
   }
-
   if (error || !campaign) {
     return <EmptyCampaignState onSignOut={signOut} />;
   }
-
   if (showSplash) {
     return <DriverLaunchSplash onDone={handleSplashDone} />;
   }
@@ -845,6 +1129,12 @@ export function CampaignScreen() {
       isEndPending={endMutation.isPending}
       recentPhotos={recentPhotos}
       profileId={profile?.id}
+      items={items}
+      onDone={markDone}
+      onSkip={markSkip}
+      onMove={moveStop}
+      nearbyStopId={nearbyStopId}
+      dismissNudge={dismissNudge}
     />
   );
 }
