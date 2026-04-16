@@ -84,7 +84,7 @@ function PhotosSectionHeader({ status, photoCount }: { status: string; photoCoun
       <View className="mt-1 flex-row items-center gap-3">
         <ApproveUnlockAnimation size={24} />
         <View className="flex-1">
-          <CampaignStageProgress status={status} showProgressBar={false} />
+          <CampaignStageProgress status={status} />
         </View>
       </View>
       <View className="mt-2">

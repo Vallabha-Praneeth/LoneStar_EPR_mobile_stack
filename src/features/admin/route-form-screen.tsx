@@ -1,6 +1,6 @@
 import type { CameraRef } from '@maplibre/maplibre-react-native';
 import type { RouteDetail } from '@/lib/api/admin/routes';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { GeoJSONSource, Layer, Marker, Camera as MLCamera, Map as MLMap } from '@maplibre/maplibre-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,8 +21,6 @@ import { RiveButton } from '@/components/motion';
 import { Switch, Text, View } from '@/components/ui';
 import { Plus } from '@/components/ui/icons';
 import { deleteRoute, fetchRouteById, upsertRoute } from '@/lib/api/admin/routes';
-
-MapLibreGL.setAccessToken(null);
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
@@ -254,7 +252,7 @@ function RouteMapPreview({ stops }: { stops: StopDraft[] }) {
     const maxLng = Math.max(...lngs);
     const minLat = Math.min(...lats);
     const maxLat = Math.max(...lats);
-    cameraRef.current?.fitBounds([maxLng, maxLat], [minLng, minLat], 40, 300);
+    cameraRef.current?.fitBounds([minLng, minLat, maxLng, maxLat], { padding: { top: 40, right: 40, bottom: 40, left: 40 }, duration: 300 });
   }, [stopsWithCoords]);
 
   if (stopsWithCoords.length < 2)
@@ -271,25 +269,24 @@ function RouteMapPreview({ stops }: { stops: StopDraft[] }) {
 
   return (
     <View className="mb-4 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
-      <MapLibreGL.MapView
+      <MLMap
         style={{ height: 220 }}
         mapStyle={STYLE_URL}
-        logoEnabled={false}
-        attributionEnabled={false}
         onDidFinishLoadingMap={onMapLoaded}
       >
-        <MapLibreGL.Camera ref={cameraRef} />
-        <MapLibreGL.ShapeSource id="route-line" shape={lineGeoJson}>
-          <MapLibreGL.LineLayer
+        <MLCamera ref={cameraRef} />
+        <GeoJSONSource id="route-line" data={lineGeoJson}>
+          <Layer
             id="route-line-layer"
+            type="line"
             style={{ lineColor: '#3b82f6', lineWidth: 3 }}
           />
-        </MapLibreGL.ShapeSource>
+        </GeoJSONSource>
         {stopsWithCoords.map((stop, i) => (
-          <MapLibreGL.PointAnnotation
+          <Marker
             key={stop.key}
             id={`stop-${i}`}
-            coordinate={[stop.longitude, stop.latitude]}
+            lngLat={[stop.longitude, stop.latitude]}
           >
             <View
               style={{
@@ -307,9 +304,9 @@ function RouteMapPreview({ stops }: { stops: StopDraft[] }) {
                 {i + 1}
               </Text>
             </View>
-          </MapLibreGL.PointAnnotation>
+          </Marker>
         ))}
-      </MapLibreGL.MapView>
+      </MLMap>
     </View>
   );
 }
