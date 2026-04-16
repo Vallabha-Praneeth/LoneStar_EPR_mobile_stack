@@ -32,6 +32,7 @@ import {
   stopShiftTracking,
 } from '@/lib/background-location';
 import { buildRouteSimulationPoints, startRouteSimulation } from '@/lib/dev/route-simulator';
+import { haversineMeters } from '@/lib/geo/haversine';
 import { motionTokens } from '@/lib/motion/tokens';
 import { useDriverPositionPublisher } from '@/lib/realtime/driver-location';
 
@@ -60,16 +61,6 @@ function isTrackingBlockedFor(shiftId: string): boolean {
 }
 
 type CampaignPhoto = DriverCampaignData['campaign_photos'][number];
-
-function haversineMeters([lng1, lat1]: [number, number], [lng2, lat2]: [number, number]): number {
-  const R = 6_371_000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const sinDLat = Math.sin(dLat / 2);
-  const sinDLng = Math.sin(dLng / 2);
-  const a = sinDLat * sinDLat + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * sinDLng * sinDLng;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function getRecentPhotos(campaign: DriverCampaignData | null | undefined): CampaignPhoto[] {
   return [...(campaign?.campaign_photos ?? [])]
