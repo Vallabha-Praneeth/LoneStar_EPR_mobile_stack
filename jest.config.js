@@ -36,5 +36,8 @@ module.exports = {
   coverageDirectory: '<rootDir>/coverage/',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.lottie$': '<rootDir>/__mocks__/file-mock.js',
+    '\\.riv$': '<rootDir>/__mocks__/file-mock.js',
+    '^rive-react-native$': '<rootDir>/__mocks__/rive-react-native.js',
   },
 };

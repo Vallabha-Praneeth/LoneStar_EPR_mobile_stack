@@ -70,10 +70,20 @@ export async function uploadPhoto({
  * Requires migration 008_stop_photo_organisation.sql (shift_stop_completions table).
  * Silently ignores duplicate completions (UNIQUE constraint).
  */
-export async function completeStop(shiftId: string, stopId: string): Promise<void> {
+export async function completeStop(
+  shiftId: string,
+  stopId: string,
+  coord?: [number, number],
+): Promise<void> {
   const { error } = await supabase
     .from('shift_stop_completions')
-    .insert({ shift_id: shiftId, stop_id: stopId })
+    .insert({
+      shift_id: shiftId,
+      stop_id: stopId,
+      // Record driver position at completion time for authenticity auditing
+      // (mirrors the photo-metadata GPS verification approach)
+      ...(coord != null ? { completed_lng: coord[0], completed_lat: coord[1] } : {}),
+    })
     .select()
     .maybeSingle();
 

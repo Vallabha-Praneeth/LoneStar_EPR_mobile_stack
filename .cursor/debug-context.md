@@ -1,29 +1,44 @@
-# AdTruck Debug Context — 2026-03-17
+# AdTruck Debug Context — 2026-04-16
 
 ## Bug Being Fixed
-The login form test file was written for an email-based login form (the original template) but the app was changed to use username-based login — now all three non-trivial tests fail when you run `pnpm test`.
+`useStopState` is called in `CampaignScreen` while the campaign query is still loading.
+The `useState` lazy initialiser runs once with an empty `stops` array and permanently
+stays empty — so route stops list shows "0 / 0 done" with no rows, and GPS proximity
+nudges never fire, on every first app launch.
 
 ## File
-/Users/praneeth/LoneStar_ERP/adtruck-driver-native/src/features/auth/components/login-form.test.tsx
+/Users/praneeth/LoneStar_ERP/adtruck-driver-native/src/features/driver/campaign-screen.tsx
 
 ## Lines
-Lines 18–65 (all three non-trivial test cases)
+Lines 799–835 (`useStopState` hook body)
 
 ## Root Cause
-The project was built on the Obytes React Native Template, which ships with an email+password login form. The form was changed to username+password login (using Supabase RPC `get_auth_email_by_username`), but the test file was never updated to match. Every testID, error string, and field name in the tests still refers to the old email form.
+State was lifted from `RouteStopsCard` (which was only rendered after data arrived) to
+`CampaignScreen` (which mounts during the loading state). React's `useState` lazy
+initialiser is guaranteed to run exactly once — on mount — so the empty array passed
+at load time is frozen as the permanent initial state. When `campaign` data arrives and
+`stops` changes from `[]` to the real array, no re-initialisation happens.
 
 ## What the Fix Should Do
-- Replace every occurrence of `email-input` testID with `username-input`
-- Replace "Email is required" error text with "Username is required"
-- Remove the third test entirely ("should display matching error when email is invalid") — there is no email field and no email format validation in the current schema
-- In the fourth test ("should call LoginForm with correct values"), change the `email: 'youssef@gmail.com'` field name to `username: 'driver1'` (or any valid username string) in both the `user.type()` call and the `toHaveBeenCalledWith` assertion
-- The schema validates: `username` must be min 1 char ("Username is required"), `password` must be min 6 chars ("Password must be at least 6 characters")
+- Add `const seededRef = React.useRef(stops.length > 0)` immediately after the
+  `useState` declaration — starts as `true` if data was already available at mount,
+  `false` if loading
+- Add a `React.useEffect` with deps `[stops, activeShift]` that:
+  1. Returns immediately if `seededRef.current` is already `true`
+  2. Returns immediately if `stops.length === 0` (still loading)
+  3. Sets `seededRef.current = true` (so subsequent query refetches are ignored)
+  4. Rebuilds `completedStopIds` from `activeShift` and calls `setItems(stops.map(...))`
+     using the same mapping as the lazy initialiser
 
 ## Do Not Change
-- The `form-title` testID check in the first test — that is correct and passes
-- The `login-button` testID — that is correct in both component and test
-- The `password-input` testID — that is correct in both component and test
-- The `onSubmit` prop wiring or anything in `login-form.tsx` itself — only the test file needs changing
+- The `useState` lazy initialiser itself — it still handles the fast-path where data is
+  in the React Query cache at mount time (e.g. returning to screen after navigation)
+- The `markDone`, `markSkip`, and `moveStop` functions — no changes needed there
+- The `max-lines-per-function` budget — `useStopState` is ~37 lines; adding 7 more is
+  well within the 110-line ESLint limit
+- The `useProximityNudge` hook — no changes needed; it already handles empty `items`
 
 ## How to Verify the Fix
-Run `pnpm test src/features/auth/components/login-form.test.tsx` and confirm all tests pass with 0 failures.
+Cold-launch the app in the Simulator (Cmd+Shift+H to home then re-open — clears
+React Query cache) and confirm the RouteStopsCard shows the correct number of stops
+and the first pending stop shows amber on the map.
