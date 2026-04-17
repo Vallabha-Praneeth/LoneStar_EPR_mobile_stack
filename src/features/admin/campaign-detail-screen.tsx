@@ -7,13 +7,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   Modal,
   View as RNView,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
   runOnJS,
@@ -39,7 +39,6 @@ import { useDriverPositionSubscriberSnapshot } from '@/lib/realtime/driver-locat
 import { useSmoothedLiveCoord } from '@/lib/realtime/live-map-motion';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
-const { width: SW, height: SH } = Dimensions.get('window');
 const SPRING = motionTokens.spring.lively;
 
 const liveMapStyles = StyleSheet.create({
@@ -137,6 +136,7 @@ function useRouteStops(routeId: string | null) {
 }
 
 function useMapExpand(cardRef: React.RefObject<RNView | null>) {
+  const { width: SW, height: SH } = useWindowDimensions();
   const [showModal, setShowModal] = React.useState(false);
   const aLeft = useSharedValue(0);
   const aTop = useSharedValue(0);
@@ -162,12 +162,13 @@ function useMapExpand(cardRef: React.RefObject<RNView | null>) {
   const openMap = React.useCallback(() => {
     // eslint-disable-next-line max-params
     cardRef.current?.measureInWindow((x, y, w, h) => {
-      aLeft.value = x;
-      aTop.value = y;
-      aW.value = w;
-      aH.value = h;
-      aRadius.value = 12;
-      aBackdrop.value = 0;
+      // Snap to card rect first (zero-duration) so Reanimated captures the start frame
+      aLeft.value = withTiming(x, { duration: 0 });
+      aTop.value = withTiming(y, { duration: 0 });
+      aW.value = withTiming(w, { duration: 0 });
+      aH.value = withTiming(h, { duration: 0 });
+      aRadius.value = withTiming(12, { duration: 0 });
+      aBackdrop.value = withTiming(0, { duration: 0 });
       setShowModal(true);
       aLeft.value = withSpring(0, SPRING);
       aTop.value = withSpring(0, SPRING);
@@ -176,7 +177,7 @@ function useMapExpand(cardRef: React.RefObject<RNView | null>) {
       aRadius.value = withTiming(0, { duration: 300 });
       aBackdrop.value = withTiming(0.45, { duration: 300 });
     });
-  }, [aLeft, aTop, aW, aH, aRadius, aBackdrop, cardRef]);
+  }, [aLeft, aTop, aW, aH, aRadius, aBackdrop, cardRef, SW, SH]);
 
   const closeMap = React.useCallback(() => {
     // eslint-disable-next-line max-params
