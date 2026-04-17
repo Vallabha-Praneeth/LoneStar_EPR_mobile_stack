@@ -16,7 +16,9 @@ import {
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { CampaignCreatedAnimation, RiveButton } from '@/components/motion';
+import { riveAssets } from '@/components/motion/rive-assets';
 import { Text, View } from '@/components/ui';
+import { RiveToggle } from '@/components/ui/rive-toggle';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { createCampaign } from '@/lib/api/admin/campaigns';
 import { fetchAdminRoutes } from '@/lib/api/admin/routes';
@@ -114,6 +116,7 @@ type FormState = {
   routeId: string;
   clientBilledAmount: string;
   internalNotes: string;
+  driverCanModifyRoute: boolean;
 };
 
 function CampaignFormBody({
@@ -184,6 +187,24 @@ function CampaignFormBody({
         <FormInput value={form.internalNotes} onChangeText={v => setField('internalNotes', v)} placeholder="Optional notes..." multiline />
       </FormField>
 
+      <View className="flex-row items-start justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
+        <View className="flex-1">
+          <Text className="text-sm font-medium text-neutral-900 dark:text-white">
+            Let driver reorder & skip stops
+          </Text>
+          <Text className="mt-1 text-xs text-neutral-500">
+            When off, the driver follows the route in order and cannot skip stops.
+          </Text>
+        </View>
+        <RiveToggle
+          source={riveAssets.unlock}
+          checked={form.driverCanModifyRoute}
+          onCheckedChange={v => setField('driverCanModifyRoute', v)}
+          accessibilityLabel="Let driver reorder and skip stops"
+          testID="driver-can-modify-route-toggle"
+        />
+      </View>
+
       <View className="items-center pt-2 pb-4">
         <RiveButton
           onPress={onSubmit}
@@ -210,6 +231,7 @@ export function CreateCampaignScreen() {
     routeId: '',
     clientBilledAmount: '',
     internalNotes: '',
+    driverCanModifyRoute: false,
   });
 
   function setField<K extends keyof FormState>(key: K, val: FormState[K]) {
@@ -248,6 +270,7 @@ export function CreateCampaignScreen() {
       route_id: form.routeId || null,
       internal_notes: form.internalNotes.trim() || null,
       client_billed_amount: !Number.isNaN(billedNum) && billedNum > 0 ? billedNum : null,
+      driver_can_modify_route: form.driverCanModifyRoute,
       created_by: profile?.id ?? '',
       status: 'draft',
     });

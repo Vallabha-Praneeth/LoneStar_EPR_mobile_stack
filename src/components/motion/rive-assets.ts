@@ -12,6 +12,7 @@ export const riveAssets = {
   // Controls
   buttonAnimation: require('../../../assets/animations/button-animation.riv'),
   toggleSwitch: require('../../../assets/animations/toggle-switch.riv'),
+  unlock: require('../../../assets/animations/unlock.riv'),
   // Admin
   dashboardHero: require('../../../assets/animations/dashboard-hero.riv'),
   campaignProgress: require('../../../assets/animations/campaign-progress.riv'),

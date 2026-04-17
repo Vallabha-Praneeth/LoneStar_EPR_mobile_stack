@@ -530,6 +530,7 @@ function StopRow({
   item,
   index,
   total,
+  canModify,
   onDone,
   onSkip,
   onMove,
@@ -538,6 +539,7 @@ function StopRow({
   item: StopState;
   index: number;
   total: number;
+  canModify: boolean;
   onDone: () => void;
   onSkip: () => void;
   onMove: (dir: 'up' | 'down') => void;
@@ -551,23 +553,27 @@ function StopRow({
       transition={{ type: 'timing', duration: motionTokens.duration.fast, delay: index * 40 }}
       className={`flex-row items-center gap-2 py-2 ${index < total - 1 ? 'border-b border-neutral-100 dark:border-neutral-700' : ''}`}
     >
-      {/* Move buttons */}
-      <View className="gap-0.5">
-        <TouchableOpacity
-          disabled={index === 0 || done || skipped}
-          onPress={() => onMove('up')}
-          className="rounded-sm bg-neutral-100 px-1.5 py-0.5 disabled:opacity-30 dark:bg-neutral-700"
-        >
-          <Text className="text-xs">↑</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          disabled={index === total - 1 || done || skipped}
-          onPress={() => onMove('down')}
-          className="rounded-sm bg-neutral-100 px-1.5 py-0.5 disabled:opacity-30 dark:bg-neutral-700"
-        >
-          <Text className="text-xs">↓</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Move buttons — only shown when admin grants route modification */}
+      {canModify
+        ? (
+            <View className="gap-0.5">
+              <TouchableOpacity
+                disabled={index === 0 || done || skipped}
+                onPress={() => onMove('up')}
+                className="rounded-sm bg-neutral-100 px-1.5 py-0.5 disabled:opacity-30 dark:bg-neutral-700"
+              >
+                <Text className="text-xs">↑</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={index === total - 1 || done || skipped}
+                onPress={() => onMove('down')}
+                className="rounded-sm bg-neutral-100 px-1.5 py-0.5 disabled:opacity-30 dark:bg-neutral-700"
+              >
+                <Text className="text-xs">↓</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        : null}
 
       {/* Stop info */}
       <View className="flex-1">
@@ -599,12 +605,16 @@ function StopRow({
               >
                 <Text className="text-xs font-semibold text-green-700 dark:text-green-400">Done</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={onSkip}
-                className="rounded-lg bg-neutral-100 px-2.5 py-1 dark:bg-neutral-700"
-              >
-                <Text className="text-xs font-medium text-neutral-500">Skip</Text>
-              </TouchableOpacity>
+              {canModify
+                ? (
+                    <TouchableOpacity
+                      onPress={onSkip}
+                      className="rounded-lg bg-neutral-100 px-2.5 py-1 dark:bg-neutral-700"
+                    >
+                      <Text className="text-xs font-medium text-neutral-500">Skip</Text>
+                    </TouchableOpacity>
+                  )
+                : null}
             </>
           )
         : (
@@ -658,11 +668,13 @@ function ProximityNudgeBanner({
 
 function RouteStopsCard({
   items,
+  canModify,
   onDone,
   onSkip,
   onMove,
 }: {
   items: StopState[];
+  canModify: boolean;
   onDone: (idx: number) => void;
   onSkip: (idx: number) => void;
   onMove: (idx: number, dir: 'up' | 'down') => void;
@@ -723,6 +735,7 @@ function RouteStopsCard({
           item={item}
           index={i}
           total={items.length}
+          canModify={canModify}
           onDone={() => handleDone(i)}
           onSkip={() => onSkip(i)}
           onMove={dir => onMove(i, dir)}
@@ -896,6 +909,7 @@ type ActiveCampaignProps = {
   recentPhotos: CampaignPhoto[];
   profileId: string | undefined;
   items: StopState[];
+  canModify: boolean;
   onDone: (idx: number) => void;
   onSkip: (idx: number) => void;
   onMove: (idx: number, dir: 'up' | 'down') => void;
@@ -915,6 +929,7 @@ function ActiveCampaignView({
   recentPhotos,
   profileId,
   items,
+  canModify,
   onDone,
   onSkip,
   onMove,
@@ -993,7 +1008,13 @@ function ActiveCampaignView({
           <RouteMapCard items={items} driverCoord={driverCoord} nearbyStopId={nearbyStopId} />
         )}
         {items.length > 0 && (
-          <RouteStopsCard items={items} onDone={onDone} onSkip={onSkip} onMove={onMove} />
+          <RouteStopsCard
+            items={items}
+            canModify={canModify}
+            onDone={onDone}
+            onSkip={onSkip}
+            onMove={onMove}
+          />
         )}
         {recentPhotos.length > 0 ? <RecentUploadsList photos={recentPhotos} /> : null}
         {profileId ? <PastCampaignsAccordion driverId={profileId} /> : null}
@@ -1119,6 +1140,7 @@ export function CampaignScreen() {
       recentPhotos={recentPhotos}
       profileId={profile?.id}
       items={items}
+      canModify={campaign.driver_can_modify_route}
       onDone={markDone}
       onSkip={markSkip}
       onMove={moveStop}
