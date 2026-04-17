@@ -1,71 +1,286 @@
 import type { CampaignDetail } from '@/lib/api/admin/campaigns';
-import { Camera, Map, Marker } from '@maplibre/maplibre-react-native';
+import type { RouteStopRow } from '@/lib/api/admin/routes';
+import { GeoJSONSource, Layer, Marker, Camera as MLCamera, Map as MLMap } from '@maplibre/maplibre-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-
-import { ActivityIndicator, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  View as RNView,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { CampaignStageProgress } from '@/components/campaign-stage-progress';
 import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import { InfoCard } from '@/components/info-card';
-import { ApproveUnlockAnimation, CampaignMilestoneAnimation, CampaignProgressAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
 import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
+import { fetchRouteById } from '@/lib/api/admin/routes';
+import { motionTokens } from '@/lib/motion/tokens';
 import { useDriverPositionSubscriberSnapshot } from '@/lib/realtime/driver-location';
 import { useSmoothedLiveCoord } from '@/lib/realtime/live-map-motion';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const { width: SW, height: SH } = Dimensions.get('window');
+const SPRING = motionTokens.spring.lively;
 
 const liveMapStyles = StyleSheet.create({
-  map: { height: 160, borderRadius: 12, overflow: 'hidden' },
+  cardMap: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  fullMap: { flex: 1 },
   dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#3b82f6', borderWidth: 2, borderColor: '#fff' },
+  stopDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#f59e0b', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 });
 
-function LiveDriverCard({ shiftId }: { shiftId: string }) {
+const expandStyles = StyleSheet.create({
+  modalRoot: { flex: 1 },
+  mapLayer: { zIndex: 0, flex: 1 },
+  closeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 10,
+    pointerEvents: 'box-none',
+  },
+});
+
+type MapContentProps = {
+  coord: [number, number] | null;
+  lineGeoJson: GeoJSON.Feature | null;
+  stopsWithCoords: RouteStopRow[];
+  mapId: string;
+  fullscreen: boolean;
+};
+
+function MapContent({ coord, lineGeoJson, stopsWithCoords, mapId, fullscreen }: MapContentProps) {
+  const mapCenter: [number, number] = coord ?? [0, 0];
+  return (
+    <MLMap
+      style={fullscreen ? liveMapStyles.fullMap : liveMapStyles.cardMap}
+      mapStyle={MAP_STYLE}
+      logo={false}
+      attribution={false}
+      dragPan={fullscreen}
+      touchZoom={fullscreen}
+      doubleTapZoom={fullscreen}
+    >
+      <MLCamera center={mapCenter} zoom={13} />
+      {lineGeoJson && (
+        <GeoJSONSource id={`route-line-${mapId}`} data={lineGeoJson}>
+          <Layer
+            id={`route-line-layer-${mapId}`}
+            type="line"
+            style={{ lineColor: '#3b82f6', lineWidth: 3, lineOpacity: 0.7 }}
+          />
+        </GeoJSONSource>
+      )}
+      {stopsWithCoords.map((stop, i) => (
+        <Marker key={stop.id} id={`stop-${stop.id}`} lngLat={[stop.longitude!, stop.latitude!]}>
+          <RNView style={liveMapStyles.stopDot}>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>{i + 1}</Text>
+          </RNView>
+        </Marker>
+      ))}
+      {coord != null && (
+        <Marker id={`live-driver-${mapId}`} lngLat={coord}>
+          <RNView style={liveMapStyles.dot} />
+        </Marker>
+      )}
+    </MLMap>
+  );
+}
+
+function useRouteStops(routeId: string | null) {
+  const { data: routeDetail } = useQuery({
+    queryKey: ['admin-route-detail', routeId],
+    queryFn: () => fetchRouteById(routeId!),
+    enabled: !!routeId,
+  });
+  const stopsWithCoords = React.useMemo(
+    () => (routeDetail?.route_stops ?? []).filter(s => s.latitude != null && s.longitude != null),
+    [routeDetail],
+  );
+  const lineGeoJson = React.useMemo<GeoJSON.Feature | null>(() => {
+    if (stopsWithCoords.length < 2) {
+      return null;
+    }
+    return {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: stopsWithCoords.map(s => [s.longitude!, s.latitude!]),
+      },
+    };
+  }, [stopsWithCoords]);
+  return { stopsWithCoords, lineGeoJson };
+}
+
+function useMapExpand(cardRef: React.RefObject<RNView | null>) {
+  const [showModal, setShowModal] = React.useState(false);
+  const aLeft = useSharedValue(0);
+  const aTop = useSharedValue(0);
+  const aW = useSharedValue(SW);
+  const aH = useSharedValue(200);
+  const aRadius = useSharedValue(12);
+  const aBackdrop = useSharedValue(0);
+
+  const expandedViewStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: aLeft.value,
+    top: aTop.value,
+    width: aW.value,
+    height: aH.value,
+    borderRadius: aRadius.value,
+    overflow: 'hidden',
+  }));
+  const backdropStyle = useAnimatedStyle(() => ({
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: `rgba(0,0,0,${aBackdrop.value})`,
+  }));
+
+  const openMap = React.useCallback(() => {
+    // eslint-disable-next-line max-params
+    cardRef.current?.measureInWindow((x, y, w, h) => {
+      aLeft.value = x;
+      aTop.value = y;
+      aW.value = w;
+      aH.value = h;
+      aRadius.value = 12;
+      aBackdrop.value = 0;
+      setShowModal(true);
+      aLeft.value = withSpring(0, SPRING);
+      aTop.value = withSpring(0, SPRING);
+      aW.value = withSpring(SW, SPRING);
+      aH.value = withSpring(SH, SPRING);
+      aRadius.value = withTiming(0, { duration: 300 });
+      aBackdrop.value = withTiming(0.45, { duration: 300 });
+    });
+  }, [aLeft, aTop, aW, aH, aRadius, aBackdrop, cardRef]);
+
+  const closeMap = React.useCallback(() => {
+    // eslint-disable-next-line max-params
+    cardRef.current?.measureInWindow((x, y, w, h) => {
+      aLeft.value = withSpring(x, SPRING);
+      aTop.value = withSpring(y, SPRING);
+      aW.value = withSpring(w, SPRING);
+      aH.value = withSpring(h, SPRING, () => runOnJS(setShowModal)(false));
+      aRadius.value = withTiming(12, { duration: 300 });
+      aBackdrop.value = withTiming(0, { duration: 300 });
+    });
+  }, [aLeft, aTop, aW, aH, aRadius, aBackdrop, cardRef]);
+
+  return { showModal, openMap, closeMap, expandedViewStyle, backdropStyle };
+}
+
+type LiveDriverCardProps = { shiftId: string; routeId: string | null };
+
+function LiveDriverCard({ shiftId, routeId }: LiveDriverCardProps) {
   const snapshot = useDriverPositionSubscriberSnapshot(shiftId);
   const coord = useSmoothedLiveCoord(snapshot);
+  const insets = useSafeAreaInsets();
   const [now, setNow] = React.useState(Date.now);
   React.useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(id);
   }, []);
   const isStale = snapshot != null && now - snapshot.ts > 60_000;
+  const { stopsWithCoords, lineGeoJson } = useRouteStops(routeId);
+  const cardRef = React.useRef<RNView>(null);
+  const { showModal, openMap, closeMap, expandedViewStyle, backdropStyle } = useMapExpand(cardRef);
+
   return (
     <View className="gap-2">
       <DriverTransitBadge />
-      {coord != null
-        ? (
-            <>
-              <Map
-                style={liveMapStyles.map}
-                mapStyle={MAP_STYLE}
-                logo={false}
-                attribution={false}
-                dragPan={false}
-                touchZoom={false}
-                doubleTapZoom={false}
-              >
-                <Camera center={coord} zoom={14} duration={300} />
-                <Marker id="live-driver" lngLat={coord}>
-                  <View style={liveMapStyles.dot} />
-                </Marker>
-              </Map>
-              {isStale && (
-                <Text className="text-xs text-amber-500">
-                  {`Last seen ${format(new Date(snapshot!.ts), 'h:mm a')}`}
-                </Text>
+      <TouchableOpacity activeOpacity={0.9} onPress={coord != null ? openMap : undefined}>
+        <RNView ref={cardRef} style={{ height: 200, borderRadius: 12, overflow: 'hidden' }}>
+          {coord != null
+            ? (
+                <MapContent
+                  coord={coord}
+                  lineGeoJson={lineGeoJson}
+                  stopsWithCoords={stopsWithCoords}
+                  mapId="card"
+                  fullscreen={false}
+                />
+              )
+            : (
+                <RNView style={{ flex: 1, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text className="text-xs text-neutral-400">Waiting for driver location…</Text>
+                </RNView>
               )}
-            </>
-          )
-        : (
-            <Text className="text-xs text-neutral-400">Waiting for driver location…</Text>
-          )}
+        </RNView>
+      </TouchableOpacity>
+
+      {isStale && (
+        <Text className="text-xs text-amber-500">
+          {`Last seen ${format(new Date(snapshot!.ts), 'h:mm a')}`}
+        </Text>
+      )}
+
+      <Modal
+        visible={showModal}
+        transparent
+        statusBarTranslucent
+        presentationStyle="overFullScreen"
+        animationType="none"
+        onRequestClose={closeMap}
+      >
+        <Animated.View style={[expandStyles.modalRoot, backdropStyle]} pointerEvents="none" />
+        <Animated.View style={expandedViewStyle}>
+          <RNView style={expandStyles.mapLayer}>
+            <MapContent
+              coord={coord}
+              lineGeoJson={lineGeoJson}
+              stopsWithCoords={stopsWithCoords}
+              mapId="full"
+              fullscreen
+            />
+          </RNView>
+          <RNView style={expandStyles.closeOverlay} pointerEvents="box-none">
+            <TouchableOpacity
+              onPress={closeMap}
+              style={{
+                position: 'absolute',
+                top: insets.top + 12,
+                right: 16,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(0,0,0,0.55)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 20,
+                elevation: 20,
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Minimize map"
+            >
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', lineHeight: 20 }}>✕</Text>
+            </TouchableOpacity>
+          </RNView>
+        </Animated.View>
+      </Modal>
     </View>
   );
 }
@@ -73,20 +288,7 @@ function LiveDriverCard({ shiftId }: { shiftId: string }) {
 function PhotosSectionHeader({ status, photoCount }: { status: string; photoCount: number }) {
   return (
     <>
-      {status === 'completed' && (
-        <View className="mt-2 items-center">
-          <CampaignMilestoneAnimation size={90} />
-        </View>
-      )}
-      <View className="mt-3 items-center">
-        <CampaignProgressAnimation width={280} height={64} />
-      </View>
-      <View className="mt-1 flex-row items-center gap-3">
-        <ApproveUnlockAnimation size={24} />
-        <View className="flex-1">
-          <CampaignStageProgress status={status} />
-        </View>
-      </View>
+      <CampaignStageProgress status={status} />
       <View className="mt-2">
         <Text className="text-sm font-semibold">
           Photos (
@@ -172,7 +374,7 @@ function CampaignInfoHeader({ campaign }: { campaign: CampaignDetail }) {
         </Card>
       )}
 
-      {activeShift ? <LiveDriverCard shiftId={activeShift.id} /> : null}
+      {activeShift ? <LiveDriverCard shiftId={activeShift.id} routeId={campaign.route_id} /> : null}
 
       {campaign.driver_shifts.length > 0 && (
         <Card className="rounded-xl p-4">
