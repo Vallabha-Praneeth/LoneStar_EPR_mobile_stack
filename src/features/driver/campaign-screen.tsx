@@ -10,7 +10,7 @@ import * as React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
-import { CampaignMilestoneAnimation, CampaignProgressAnimation, SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
 import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
@@ -393,8 +393,7 @@ const mapStyles = StyleSheet.create({
 });
 
 // Tracks the "next pending stop" and flies the map camera to it when it changes.
-// Uses the imperative setCamera() ref API because animationMode/animationDuration
-// are absent from MLCamera's TypeScript props in beta.30.
+// Uses flyTo() — the correct MapLibre beta.30 imperative camera API.
 function useCameraAdvance(
   items: StopState[],
   cameraRef: React.RefObject<any>,
@@ -417,12 +416,7 @@ function useCameraAdvance(
       return;
     if (nextStopId !== prevId.current) {
       prevId.current = nextStopId;
-      cameraRef.current?.setCamera({
-        centerCoordinate: [nextStopLng, nextStopLat],
-        zoomLevel: 12,
-        animationMode: 'flyTo',
-        animationDuration: 800,
-      });
+      cameraRef.current?.flyTo({ center: [nextStopLng, nextStopLat], zoom: 12, duration: 800 });
     }
   }, [nextStopId, nextStopLng, nextStopLat, cameraRef]);
   return initialCenter;
@@ -710,10 +704,6 @@ function RouteStopsCard({
         </Text>
       </View>
 
-      <View className="mb-3 items-center">
-        <CampaignProgressAnimation width={220} height={48} />
-      </View>
-
       {allDone && (
         <MotiView
           from={{ opacity: 0, scale: 0.8 }}
@@ -721,7 +711,6 @@ function RouteStopsCard({
           transition={motionTokens.spring.lively}
           className="mb-3 items-center"
         >
-          <CampaignMilestoneAnimation size={80} />
           <Text className="mt-1 text-center text-sm font-semibold text-green-600 dark:text-green-400">
             All stops complete!
           </Text>

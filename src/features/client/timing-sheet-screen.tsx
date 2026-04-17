@@ -5,7 +5,7 @@ import * as React from 'react';
 
 import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { CampaignMilestoneAnimation, emptyStatePresets, lottieAssets } from '@/components/motion';
+import { emptyStatePresets, lottieAssets } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { CheckCircle, ChevronLeft, Clock, LogOut } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
@@ -124,9 +124,6 @@ export function TimingSheetScreen() {
 
       {clientId && !isLoading && rows.length > 0 && (
         <ScrollView className="flex-1 px-4 pt-4 pb-8">
-          <View className="mb-2 items-center">
-            <CampaignMilestoneAnimation size={80} />
-          </View>
           {rows.map(row => (
             <TimingShiftCard
               key={row.shiftId}
