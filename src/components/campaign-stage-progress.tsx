@@ -1,6 +1,5 @@
 import * as React from 'react';
 
-import { CampaignProgressAnimation } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 
 type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed';
@@ -26,11 +25,6 @@ export function CampaignStageProgress({ status }: Props) {
 
   return (
     <View className="gap-3">
-      {/* Rive decorative bar */}
-      <View className="items-center">
-        <CampaignProgressAnimation width={280} height={64} />
-      </View>
-
       {/* Step indicator */}
       <View className="px-1">
         {/* Circles + connectors */}

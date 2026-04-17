@@ -9,6 +9,7 @@
   },
   "main": "expo-router/entry",
   "scripts": {
+    "demo": "bash scripts/demo.sh",
     "start": "expo start",
     "prebuild": "pnpm expo prebuild",
     "android": "expo run:android",
