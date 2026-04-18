@@ -3,11 +3,11 @@ import type { AnalyticsFilters, AnalyticsRange, AnalyticsSummary, CampaignStatus
 import { useQuery } from '@tanstack/react-query';
 
 import * as React from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, ScrollView, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppLogo } from '@/components/app-logo';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
-import { DashboardHeroAnimation, emptyStatePresets, ListPaginationAnimation, lottieAssets } from '@/components/motion';
+import { emptyStatePresets, IconSetAnimation, ListPaginationAnimation, lottieAssets } from '@/components/motion';
 import { Text, View } from '@/components/ui';
 import { Card } from '@/components/ui/card';
 import { HorizontalBarChart } from '@/components/ui/horizontal-bar-chart';
@@ -42,6 +42,7 @@ const STATUSES: { value: CampaignStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'draft', label: 'Draft' },
 ];
+const BURST_DURATION_MS = 750;
 
 function RangePicker({
   value,
@@ -314,9 +315,6 @@ function DataContent({ paddingBottom, isLoading, isError, summary, clientBars, d
   }
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom }} showsVerticalScrollIndicator={false}>
-      <View className="mb-4 items-center">
-        <DashboardHeroAnimation width={280} height={130} />
-      </View>
       {summary && <KpiGrid summary={summary} />}
       {clientBars.length > 0 && (
         <SectionCard title="Top Clients by Revenue">
@@ -332,6 +330,50 @@ function DataContent({ paddingBottom, isLoading, isError, summary, clientBars, d
         <EmptyStateWithAnimation source={lottieAssets.adminEmptySearch} message="No campaign data for this period" testID="admin-analytics-empty-animation" {...emptyStatePresets.adminAnalytics} />
       )}
     </ScrollView>
+  );
+}
+
+function useAnalyticsBurst() {
+  const [visible, setVisible] = React.useState(false);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const trigger = React.useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    setVisible(true);
+    timerRef.current = setTimeout(() => {
+      setVisible(false);
+      timerRef.current = null;
+    }, BURST_DURATION_MS);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  return { visible, trigger };
+}
+
+function BurstOverlay({ visible }: { visible: boolean }) {
+  const colorScheme = useColorScheme();
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <View
+      pointerEvents="none"
+      className="absolute inset-0 z-20 items-center justify-center"
+      style={{ backgroundColor: colorScheme === 'dark' ? 'rgba(10, 10, 10, 0.66)' : 'rgba(249, 250, 251, 0.66)' }}
+    >
+      <IconSetAnimation size={240} />
+    </View>
   );
 }
 
@@ -366,6 +408,25 @@ export function AnalyticsScreen() {
 
   const clientBars: BarDatum[] = (clientsQ.data ?? []).map(c => ({ label: c.clientName, value: c.revenue, formattedValue: formatCurrency(c.revenue) }));
   const driverBars: BarDatum[] = (driversQ.data ?? []).map(d => ({ label: d.driverName, value: d.payout, formattedValue: formatCurrency(d.payout) }));
+  const isLoading = summaryQ.isLoading || clientsQ.isLoading || driversQ.isLoading;
+  const { visible: burstVisible, trigger: triggerBurst } = useAnalyticsBurst();
+  const hasMountedRef = React.useRef(false);
+  const wasLoadingRef = React.useRef(true);
+
+  React.useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    triggerBurst();
+  }, [filterKey, triggerBurst]);
+
+  React.useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      triggerBurst();
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, triggerBurst]);
 
   return (
     <View testID="analytics-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
@@ -392,12 +453,13 @@ export function AnalyticsScreen() {
       />
       <DataContent
         paddingBottom={insets.bottom + 16}
-        isLoading={summaryQ.isLoading || clientsQ.isLoading || driversQ.isLoading}
+        isLoading={isLoading}
         isError={summaryQ.isError || clientsQ.isError || driversQ.isError}
         summary={summaryQ.data}
         clientBars={clientBars}
         driverBars={driverBars}
       />
+      <BurstOverlay visible={burstVisible} />
     </View>
   );
 }
