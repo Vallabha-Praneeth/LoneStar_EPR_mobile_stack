@@ -8,9 +8,11 @@ env:
 ---
 # Minimum-viable smoke test for the Maestro Cloud pipeline.
 #
-# Logs in as driver-e2e on a standalone preview build (no Metro, no dev client)
-# and asserts the driver campaign screen mounts. Full shift-flow is a
-# follow-up — this flow exists to prove the build → upload → test path.
+# Login steps are INLINED (not delegated to ../utils/driver-login.yaml)
+# because Maestro sub-flow `env:` header defaults OVERRIDE parent env —
+# driver-login.yaml has `USERNAME: driver1` as a dev default, which would
+# shadow the e2e creds passed from the workflow. Inlining keeps env
+# precedence single-scoped to this file.
 
 - launchApp:
     appId: ${APP_ID}
@@ -23,9 +25,26 @@ env:
       id: login-button
     timeout: 30000
 
-- runFlow: ../utils/driver-login.yaml
+- tapOn:
+    id: username-input
+- inputText: ${USERNAME}
+- tapOn:
+    id: password-input
+- inputText: ${PASSWORD}
+- runFlow: ../utils/hide-keyboard.yaml
+- tapOn:
+    id: login-button
 
+# iOS may show a "Save Password?" keychain sheet after login — dismiss if present.
+- runFlow:
+    when:
+      visible: Not Now
+    commands:
+      - tapOn: Not Now
+
+# Login triggers: RPC get_auth_email_by_username → signInWithPassword → profile fetch → route.
+# 30s accommodates network latency on Maestro Cloud simulators.
 - extendedWaitUntil:
     visible:
       id: driver-campaign-screen
-    timeout: 20000
+    timeout: 30000
