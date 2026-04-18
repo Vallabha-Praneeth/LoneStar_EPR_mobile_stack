@@ -1,0 +1,31 @@
+appId: ${APP_ID}
+tags:
+  - smoke
+env:
+  APP_ID: com.adtruck-driver-native.preview
+  USERNAME: driver-e2e
+  PASSWORD: E2eDriver!20260418
+---
+# Minimum-viable smoke test for the Maestro Cloud pipeline.
+#
+# Logs in as driver-e2e on a standalone preview build (no Metro, no dev client)
+# and asserts the driver campaign screen mounts. Full shift-flow is a
+# follow-up — this flow exists to prove the build → upload → test path.
+
+- launchApp:
+    appId: ${APP_ID}
+    clearState: true
+    arguments:
+      isE2E: 'true'
+
+- extendedWaitUntil:
+    visible:
+      id: login-button
+    timeout: 30000
+
+- runFlow: ../utils/driver-login.yaml
+
+- extendedWaitUntil:
+    visible:
+      id: driver-campaign-screen
+    timeout: 20000

@@ -1,0 +1,119 @@
+# E2E iOS via Maestro Cloud
+#
+# Builds a simulator `.app` through EAS Cloud using the `simulator-e2e` profile,
+# then runs the driver login smoke flow against the adtruck-e2e Supabase project.
+#
+# Soft-gated: not a required check until the pipeline is proven stable.
+#
+# Required secrets:
+#   EXPO_TOKEN                — EAS authentication
+#   MAESTRO_CLOUD_API_KEY     — Maestro Cloud upload
+#   E2E_DRIVER_PASSWORD       — seeded driver-e2e password (override of default)
+#
+# Required EAS environment `e2e` (set once via `eas env:create`):
+#   EXPO_PUBLIC_SUPABASE_URL
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY
+#   EXPO_PUBLIC_API_URL
+
+name: E2E iOS (Maestro Cloud)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - '.maestro/**'
+      - 'eas.json'
+      - 'app.config.ts'
+      - 'env.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/e2e-ios-maestro-cloud.yml'
+      - '.github/actions/setup-node-pnpm-install/**'
+
+concurrency:
+  group: e2e-ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-e2e:
+    if: github.event.pull_request.draft != true
+    name: Build + run iOS smoke via Maestro Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node + PNPM + install deps
+        uses: ./.github/actions/setup-node-pnpm-install
+
+      - name: 🔧 Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🏗️ EAS build (simulator-e2e)
+        id: eas-build
+        run: |
+          set -euo pipefail
+          echo "Starting EAS build..."
+          BUILD_JSON=$(eas build \
+            --profile simulator-e2e \
+            --platform ios \
+            --non-interactive \
+            --wait \
+            --json \
+            --message "e2e PR $GITHUB_SHA")
+          echo "$BUILD_JSON" > build.json
+          # `eas build --json` returns an array; take the first (only) entry.
+          ARTIFACT_URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl')
+          if [[ -z "$ARTIFACT_URL" || "$ARTIFACT_URL" == "null" ]]; then
+            echo "No build URL returned — EAS build failed."
+            exit 1
+          fi
+          echo "artifact_url=$ARTIFACT_URL" >> "$GITHUB_OUTPUT"
+          echo "Build URL: $ARTIFACT_URL"
+
+      - name: ⬇️ Download + unpack simulator app
+        id: unpack
+        run: |
+          set -euo pipefail
+          curl -L "${{ steps.eas-build.outputs.artifact_url }}" -o build.tar.gz
+          mkdir -p build-out
+          tar -xzf build.tar.gz -C build-out
+          APP_PATH=$(find build-out -maxdepth 3 -type d -name "*.app" | head -1)
+          if [[ -z "$APP_PATH" ]]; then
+            echo "No .app bundle found in artifact."
+            find build-out -maxdepth 3 | head -50
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo ".app at: $APP_PATH"
+
+      - name: 📱 Run Maestro Cloud (login-smoke)
+        uses: mobile-dev-inc/action-maestro-cloud@v2.0.2
+        with:
+          api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
+          app-file: ${{ steps.unpack.outputs.app_path }}
+          name: ios-login-smoke-${{ github.run_id }}
+          ios-version: 17
+          workspace: .maestro/driver/login-smoke.yaml
+          env: |
+            APP_ID=com.adtruck-driver-native.preview
+            USERNAME=driver-e2e
+            PASSWORD=${{ secrets.E2E_DRIVER_PASSWORD }}
+
+      - name: 📤 Upload build metadata
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: eas-build-metadata-${{ github.run_id }}
+          path: build.json
+          if-no-files-found: ignore
