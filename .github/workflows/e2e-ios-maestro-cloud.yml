@@ -6,14 +6,15 @@
 # Soft-gated: not a required check until the pipeline is proven stable.
 #
 # Required secrets:
-#   EXPO_TOKEN                — EAS authentication
-#   MAESTRO_CLOUD_API_KEY     — Maestro Cloud upload
-#   E2E_DRIVER_PASSWORD       — seeded driver-e2e password (override of default)
+#   EAS_TOKEN                       — EAS authentication
+#   MAESTRO_CLOUD_API_KEY           — Maestro Cloud upload
+#   E2E_DRIVER_PASSWORD             — seeded driver-e2e password
+#   EXPO_PUBLIC_SUPABASE_URL_E2E    — injected into eas.json simulator-e2e profile
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY_E2E
+#   EXPO_PUBLIC_API_URL_E2E
 #
-# Required EAS environment `e2e` (set once via `eas env:create`):
-#   EXPO_PUBLIC_SUPABASE_URL
-#   EXPO_PUBLIC_SUPABASE_ANON_KEY
-#   EXPO_PUBLIC_API_URL
+# Note: custom EAS environments require a paid plan, so we patch eas.json
+# at CI time via jq instead of using `eas env:create --environment e2e`.
 
 name: E2E iOS (Maestro Cloud)
 
@@ -57,7 +58,29 @@ jobs:
         with:
           expo-version: latest
           eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: 🔐 Inject e2e Supabase secrets into eas.json
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL_E2E }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY_E2E }}
+          E2E_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL_E2E }}
+        run: |
+          set -euo pipefail
+          jq \
+            --arg url "$E2E_SUPABASE_URL" \
+            --arg anon "$E2E_SUPABASE_ANON_KEY" \
+            --arg api "$E2E_API_URL" \
+            '.build."simulator-e2e".env.EXPO_PUBLIC_SUPABASE_URL = $url
+             | .build."simulator-e2e".env.EXPO_PUBLIC_SUPABASE_ANON_KEY = $anon
+             | .build."simulator-e2e".env.EXPO_PUBLIC_API_URL = $api' \
+            eas.json > eas.json.tmp
+          mv eas.json.tmp eas.json
+          # Sanity: confirm placeholders were replaced (don't print the values).
+          if grep -q "__SET_IN_CI__" eas.json; then
+            echo "eas.json still contains __SET_IN_CI__ placeholder — secret missing."
+            exit 1
+          fi
 
       - name: 🏗️ EAS build (simulator-e2e)
         id: eas-build
