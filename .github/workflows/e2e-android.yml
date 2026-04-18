@@ -3,12 +3,17 @@
 # End-to-end testing: https://starter.obytes.com/testing/end-to-end-testing/
 
 # ✍️ Description:
-# This workflow is used to run end-to-end tests on Android using Maestro.
-# As a first step, it will generate a test APK using the Gradle build and then upload it as an artifact.
-# A new job will be started to run the tests using the test APK generated in the previous job.
-# To test the app, we set up an Android emulator using the `reactivecircus/android-emulator-runner` action. This runner requires macOS as the operating system for the runner.
-# This workflow will be triggered on pull requests (PRs) with the label "android-test-github" or can be manually triggered from the Actions tab.
+# End-to-end tests on Android using Maestro + a GitHub-hosted emulator.
+# Generates a staging APK via Gradle, then boots an AVD on a macOS runner
+# and runs the full .maestro/ suite against it.
 #
+# Triggers:
+#   - Every non-draft PR that touches app source, native config, or maestro
+#     flows (paths filter below). Doc-only PRs skip so they don't pay
+#     the ~15min runner cost.
+#   - Manual workflow_dispatch from the Actions tab (always runs).
+#
+# Concurrency: newer commits on the same branch cancel older runs.
 
 # 🚨 GITHUB SECRETS REQUIRED: None
 
@@ -18,10 +23,25 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main, master]
+    paths:
+      - 'src/**'
+      - '.maestro/**'
+      - 'android/**'
+      - 'app.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/e2e-android.yml'
+      - '.github/actions/**'
+
+concurrency:
+  group: e2e-android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   generate-test-apk:
-    if: github.event_name != 'pull_request' || ( github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'android-test-github'))
+    # Skip drafts — they're work-in-progress and shouldn't pay the runner cost.
+    # Everything else is already filtered by the paths config above.
+    if: github.event.pull_request.draft != true
     name: Generate Test APK (Gradle)
     runs-on: ubuntu-latest
 
