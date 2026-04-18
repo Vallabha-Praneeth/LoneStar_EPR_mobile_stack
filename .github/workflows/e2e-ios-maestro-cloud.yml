@@ -8,6 +8,7 @@
 # Required secrets:
 #   EAS_TOKEN                       — EAS authentication
 #   MAESTRO_CLOUD_API_KEY           — Maestro Cloud upload
+#   MAESTRO_CLOUD_PROJECT_ID        — Maestro Cloud project (required by action v2)
 #   E2E_DRIVER_PASSWORD             — seeded driver-e2e password
 #   EXPO_PUBLIC_SUPABASE_URL_E2E    — injected into eas.json simulator-e2e profile
 #   EXPO_PUBLIC_SUPABASE_ANON_KEY_E2E
@@ -124,9 +125,9 @@ jobs:
         uses: mobile-dev-inc/action-maestro-cloud@v2.0.2
         with:
           api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
+          project-id: ${{ secrets.MAESTRO_CLOUD_PROJECT_ID }}
           app-file: ${{ steps.unpack.outputs.app_path }}
           name: ios-login-smoke-${{ github.run_id }}
-          ios-version: 17
           workspace: .maestro/driver/login-smoke.yaml
           env: |
             APP_ID=com.adtruck-driver-native.preview
