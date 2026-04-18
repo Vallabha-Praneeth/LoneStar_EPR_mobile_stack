@@ -15,6 +15,7 @@ export type DriverCampaignData = {
   campaign_date: string;
   routes: { name: string; route_stops: RouteStop[] } | null;
   status: 'draft' | 'pending' | 'active' | 'completed';
+  driver_can_modify_route: boolean;
   driver_shifts: { id: string; started_at: string; ended_at: string | null; shift_stop_completions: { stop_id: string }[] }[];
   campaign_photos: { id: string; submitted_at: string; storage_path: string | null }[];
 };
@@ -31,7 +32,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, title, campaign_date, routes ( name, route_stops ( id, stop_order, venue_name, address, latitude, longitude ) ), status, driver_shifts ( id, started_at, ended_at, shift_stop_completions ( stop_id ) ), campaign_photos ( id, submitted_at, storage_path )',
+      'id, title, campaign_date, driver_can_modify_route, routes ( name, route_stops ( id, stop_order, venue_name, address, latitude, longitude ) ), status, driver_shifts ( id, started_at, ended_at, shift_stop_completions ( stop_id ) ), campaign_photos ( id, submitted_at, storage_path )',
     )
     .eq('driver_profile_id', driverId)
     .gte('campaign_date', today)
@@ -68,6 +69,7 @@ export async function fetchDriverCampaign(driverId: string): Promise<DriverCampa
     title: raw.title as string,
     campaign_date: raw.campaign_date as string,
     status: raw.status as DriverCampaignData['status'],
+    driver_can_modify_route: Boolean(raw.driver_can_modify_route ?? false),
     routes: normalizedRoutes,
     driver_shifts: (raw.driver_shifts ?? []) as DriverCampaignData['driver_shifts'],
     campaign_photos: (raw.campaign_photos ?? []) as DriverCampaignData['campaign_photos'],
