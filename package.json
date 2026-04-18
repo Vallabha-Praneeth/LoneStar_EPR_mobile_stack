@@ -44,7 +44,8 @@
     "test:ci": "pnpm run test --coverage",
     "test:watch": "pnpm run test --watch",
     "install-maestro": "curl -Ls 'https://get.maestro.mobile.dev' | bash",
-    "e2e-test": "maestro test .maestro/ -e APP_ID=com.adtruck-driver-native.development"
+    "e2e-test": "maestro test .maestro/ -e APP_ID=com.adtruck-driver-native.development",
+    "seed:e2e": "tsx scripts/seed-e2e-users.ts"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
