@@ -128,7 +128,8 @@ jobs:
           project-id: ${{ secrets.MAESTRO_CLOUD_PROJECT_ID }}
           app-file: ${{ steps.unpack.outputs.app_path }}
           name: ios-login-smoke-${{ github.run_id }}
-          workspace: .maestro/driver/login-smoke.yaml
+          workspace: .maestro
+          include-tags: smoke
           env: |
             APP_ID=com.adtruck-driver-native.preview
             USERNAME=driver-e2e
