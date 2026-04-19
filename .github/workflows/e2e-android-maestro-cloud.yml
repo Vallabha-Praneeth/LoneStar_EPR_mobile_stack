@@ -38,6 +38,9 @@ concurrency:
   group: e2e-android-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   android-e2e:
     if: github.event.pull_request.draft != true

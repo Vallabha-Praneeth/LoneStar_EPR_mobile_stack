@@ -38,6 +38,9 @@ concurrency:
   group: e2e-ios-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   ios-e2e:
     if: github.event.pull_request.draft != true
