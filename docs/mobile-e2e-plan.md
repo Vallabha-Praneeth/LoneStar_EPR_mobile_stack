@@ -245,9 +245,9 @@ Mirror PR C for Android. New workflow `e2e-android-maestro-cloud.yml` OR revise 
 
 ### Gotchas
 
-- APK vs AAB: Maestro Cloud accepts APK. EAS defaults to AAB for production but APK for preview — verify profile output format.
+- APK vs AAB: Maestro Cloud accepts APK. Gradle `assembleRelease` produces APK at `./android/app/build/outputs/apk/release/app-release.apk`.
 - `.maestro/utils/driver-login.yaml` currently has platform-specific APP_ID defaults; clean up to rely solely on `${APP_ID}` from workflow env.
-- Delete `e2e-android.yml` and `e2e-android-eas-build.yml` as part of this PR once the Cloud-based Android path is proven — don't leave three competing workflows.
+- Android intentionally uses local Gradle (ubuntu-latest) rather than EAS Cloud. First EAS Android dispatch hit the free-tier monthly quota after one run — Gradle avoids the quota entirely. iOS still uses EAS because sim builds need macOS + Xcode.
 
 ---
 
