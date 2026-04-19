@@ -37,6 +37,10 @@ tags:
 - tapOn:
     id: username-input
 - inputText: ${USERNAME}
+# Hide keyboard before tapping password-input. On Android the soft keyboard
+# covers the password field, so Maestro reports "Element not found" even
+# though the testID is present. iOS doesn't need this but running it is a no-op.
+- runFlow: ../utils/hide-keyboard.yaml
 - tapOn:
     id: password-input
 - inputText: ${PASSWORD}
