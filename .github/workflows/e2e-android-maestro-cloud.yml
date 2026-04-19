@@ -58,11 +58,12 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY_E2E }}
       EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL_E2E }}
       # Restrict native compilation to a single ABI. Maestro Cloud runs
-      # x86_64 Android emulators, so the other three ABIs (x86, arm64-v8a,
-      # armeabi-v7a) are dead weight — building them costs ~25 min of CMake
-      # time per run (reanimated, gesture-handler, worklets, nitro, rive).
-      # Passed to Gradle as `-PreactNativeArchitectures=x86_64`.
-      ORG_GRADLE_PROJECT_reactNativeArchitectures: x86_64
+      # arm64-v8a Android emulators (verified via upload 400: "APK does
+      # not support arm64-v8a"), so the other three ABIs (x86, x86_64,
+      # armeabi-v7a) are dead weight — building them costs ~25 min of
+      # CMake time per run (reanimated, gesture-handler, worklets, nitro,
+      # rive). Passed to Gradle as `-PreactNativeArchitectures=arm64-v8a`.
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: arm64-v8a
 
     steps:
       - name: 📦 Checkout
