@@ -1,0 +1,107 @@
+# E2E Android via Maestro Cloud
+#
+# Builds a release APK locally on the Ubuntu runner via `expo prebuild` +
+# Gradle, then runs the driver login smoke flow on Maestro Cloud against
+# the adtruck-e2e Supabase project.
+#
+# Why Gradle instead of EAS: Android builds don't need macOS/Xcode the way
+# iOS sim builds do, and EAS free-tier Android quota is tight. A local
+# Gradle build is free, faster (no cloud upload/queue), and more
+# reproducible.
+#
+# Soft-gated: not a required check until the pipeline is proven stable.
+#
+# Required secrets (reused from PR C):
+#   MAESTRO_CLOUD_API_KEY           — Maestro Cloud upload
+#   MAESTRO_CLOUD_PROJECT_ID        — Maestro Cloud project (required by action v2)
+#   E2E_DRIVER_PASSWORD             — seeded driver-e2e password
+#   EXPO_PUBLIC_SUPABASE_URL_E2E    — e2e Supabase URL, embedded into the APK
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY_E2E
+#   EXPO_PUBLIC_API_URL_E2E
+
+name: E2E Android (Maestro Cloud)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - '.maestro/**'
+      - 'android/**'
+      - 'app.config.ts'
+      - 'env.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/e2e-android-maestro-cloud.yml'
+      - '.github/actions/setup-node-pnpm-install/**'
+      - '.github/actions/setup-jdk-generate-apk/**'
+
+concurrency:
+  group: e2e-android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android-e2e:
+    if: github.event.pull_request.draft != true
+    name: Build + run Android smoke via Maestro Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      # Embedded into the APK at bundle time via env.ts → process.env.
+      # STRICT_ENV_VALIDATION=1 (set by pnpm prebuild:preview) will fail
+      # fast if any of these are missing or malformed.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL_E2E }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY_E2E }}
+      EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL_E2E }}
+      # Restrict native compilation to a single ABI. Maestro Cloud runs
+      # arm64-v8a Android emulators (verified via upload 400: "APK does
+      # not support arm64-v8a"), so the other three ABIs (x86, x86_64,
+      # armeabi-v7a) are dead weight — building them costs ~25 min of
+      # CMake time per run (reanimated, gesture-handler, worklets, nitro,
+      # rive). Passed to Gradle as `-PreactNativeArchitectures=arm64-v8a`.
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: arm64-v8a
+
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node + PNPM + install deps
+        uses: ./.github/actions/setup-node-pnpm-install
+
+      - name: 🏗️ Setup JDK + Gradle + Generate APK (preview)
+        uses: ./.github/actions/setup-jdk-generate-apk
+        with:
+          APP_ENV: preview
+
+      - name: ✅ Sanity-check APK exists
+        id: apk
+        run: |
+          set -euo pipefail
+          APK=./android/app/build/outputs/apk/release/app-release.apk
+          if [[ ! -s "$APK" ]]; then
+            echo "APK not found or empty at $APK"
+            ls -la ./android/app/build/outputs/apk/release/ || true
+            exit 1
+          fi
+          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
+          echo "APK: $APK ($(stat -c%s "$APK") bytes)"
+
+      - name: 📱 Run Maestro Cloud (login-smoke)
+        uses: mobile-dev-inc/action-maestro-cloud@v2.0.2
+        with:
+          api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
+          project-id: ${{ secrets.MAESTRO_CLOUD_PROJECT_ID }}
+          app-file: ${{ steps.apk.outputs.apk_path }}
+          name: android-login-smoke-${{ github.run_id }}
+          workspace: .maestro
+          include-tags: smoke
+          env: |
+            APP_ID=com.adtruck_driver_native.preview
+            USERNAME=driver-e2e
+            PASSWORD=${{ secrets.E2E_DRIVER_PASSWORD }}

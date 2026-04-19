@@ -1,12 +1,21 @@
 appId: ${APP_ID}
 tags:
   - smoke
-env:
-  APP_ID: com.adtruck-driver-native.preview
-  USERNAME: driver-e2e
-  PASSWORD: E2eDriver!20260418
 ---
 # Minimum-viable smoke test for the Maestro Cloud pipeline.
+#
+# APP_ID, USERNAME, PASSWORD MUST be provided by the caller — no flow-header
+# defaults, because Maestro's flow-header `env:` takes precedence over the
+# CLI's `-e KEY=VALUE` input. Hardcoded defaults would shadow the workflow's
+# platform-correct values (iOS bundle ID uses hyphens, Android package uses
+# underscores) and would also commit test credentials to version control.
+#
+# Run locally with:
+#   maestro test \
+#     -e APP_ID=com.adtruck_driver_native.preview \
+#     -e USERNAME=driver-e2e \
+#     -e PASSWORD=<e2e-password> \
+#     .maestro/driver/login-smoke.yaml
 #
 # Login steps are INLINED (not delegated to ../utils/driver-login.yaml)
 # because Maestro sub-flow `env:` header defaults OVERRIDE parent env —
@@ -28,6 +37,10 @@ env:
 - tapOn:
     id: username-input
 - inputText: ${USERNAME}
+# Hide keyboard before tapping password-input. On Android the soft keyboard
+# covers the password field, so Maestro reports "Element not found" even
+# though the testID is present. iOS doesn't need this but running it is a no-op.
+- runFlow: ../utils/hide-keyboard.yaml
 - tapOn:
     id: password-input
 - inputText: ${PASSWORD}
