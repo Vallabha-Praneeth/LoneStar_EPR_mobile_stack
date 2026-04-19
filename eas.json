@@ -68,6 +68,10 @@
         "simulator": true,
         "image": "latest"
       },
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview",
         "EXPO_PUBLIC_SUPABASE_URL": "__SET_IN_CI__",

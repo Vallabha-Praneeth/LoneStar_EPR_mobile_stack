@@ -210,10 +210,10 @@ New workflow `e2e-ios-maestro-cloud.yml`. Runs on PRs that touch app source / ma
 
 ## PR D — Android E2E via Maestro Cloud
 
-**Status:** pending
-**Started:**
+**Status:** in-progress
+**Started:** 2026-04-19
 **Completed:**
-**Branch:**
+**Branch:** feat/e2e-android-maestro-cloud
 **PR URL:**
 
 ### Scope
