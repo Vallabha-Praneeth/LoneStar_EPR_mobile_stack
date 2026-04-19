@@ -61,6 +61,19 @@
       "env": {
         "EXPO_PUBLIC_APP_ENV": "development"
       }
+    },
+    "simulator-e2e": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true,
+        "image": "latest"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_SUPABASE_URL": "__SET_IN_CI__",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "__SET_IN_CI__",
+        "EXPO_PUBLIC_API_URL": "__SET_IN_CI__"
+      }
     }
   },
   "submit": {
