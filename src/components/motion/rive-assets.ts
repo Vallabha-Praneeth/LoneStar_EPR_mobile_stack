@@ -27,6 +27,14 @@ export const riveAssets = {
   photoGalleryHover: require('../../../assets/animations/photo-gallery-hover.riv'),
   campaignFill: require('../../../assets/animations/campaign-fill.riv'),
   welcomeCharacter: require('../../../assets/animations/welcome-character.riv'),
+  // Phase 1 — analytics
+  skycoins: require('../../../assets/animations/skycoins.riv'),
+  // Phase 2 — global UX
+  brandLogo: require('../../../assets/animations/logo-chrome.riv'),
+  backArrow: require('../../../assets/animations/back-arrow.riv'),
+  shiftStart: require('../../../assets/animations/shift-start.riv'),
+  offline: require('../../../assets/animations/offline.riv'),
+  logoutIcon: require('../../../assets/animations/logout-icon.riv'),
 } as const;
 
 export type RiveAssetKey = keyof typeof riveAssets;
