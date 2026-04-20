@@ -7,4 +7,12 @@ export const lottieAssets = {
   uploadSuccess: require('../../../assets/animations/success-check.lottie'),
   adminEmptySearch: require('../../../assets/animations/admin-empty-search.lottie'),
   clientEmptyBox: require('../../../assets/animations/client-empty-box.lottie'),
+  analyticsCharacter: require('../../../assets/animations/analytics-character.lottie'),
+  chartDiagram: require('../../../assets/animations/chart-diagram.lottie'),
+  businessDeal: require('../../../assets/animations/business-deal.lottie'),
+  filterDrill: require('../../../assets/animations/filter-drill.lottie'),
+  dataAnalyticsAndResearch: require('../../../assets/animations/data-analytics-and-research-050hLTRnUw.lottie'),
+  dataExtraction: require('../../../assets/animations/data-extraction-FJzauggnRA.lottie'),
+  driverAnalyticsHero: require('../../../assets/animations/driver-analytics-hero.lottie'),
+  clientAnalyticsHero: require('../../../assets/animations/client-analytics-hero.lottie'),
 } as const;
