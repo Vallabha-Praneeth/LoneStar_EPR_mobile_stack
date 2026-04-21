@@ -90,7 +90,7 @@ describe('filterDrillBurst', () => {
 
   it('auto-hides after burst visibility timeout', async () => {
     jest.useFakeTimers();
-    const { queryByTestId, rerender } = render(<FilterDrillBurst trigger="all" />);
+    const { getByTestId, queryByTestId, rerender } = render(<FilterDrillBurst trigger="all" />);
     await act(async () => {});
 
     act(() => {
@@ -113,7 +113,7 @@ describe('filterDrillBurst', () => {
 
   it('retrigger resets the visibility window', async () => {
     jest.useFakeTimers();
-    const { queryByTestId, rerender } = render(<FilterDrillBurst trigger="all" />);
+    const { getByTestId, queryByTestId, rerender } = render(<FilterDrillBurst trigger="all" />);
     await act(async () => {});
 
     act(() => {

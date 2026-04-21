@@ -59,7 +59,11 @@ only fetches `id, submitted_at` — no `storage_path`.
 
 1. Add `storage_path` to the `DriverCampaignData.campaign_photos` type:
 ```ts
-campaign_photos: { id: string; submitted_at: string; storage_path: string | null; }[];
+campaign_photos: Array<{
+  id: string;
+  submitted_at: string;
+  storage_path: string | null;
+}>;
 ```
 
 2. Add `storage_path` to the select query:
