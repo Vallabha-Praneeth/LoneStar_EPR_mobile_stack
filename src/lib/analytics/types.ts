@@ -2,12 +2,13 @@
 
 export type AnalyticsRange = '1d' | '1w' | '1m' | '3m' | '6m' | '1y';
 
-export type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed';
+export type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed' | 'overdue';
 
 export type AnalyticsFilters = {
   range: AnalyticsRange;
   clientId?: string;
   driverId?: string;
+  campaignId?: string;
   status?: CampaignStatus;
 };
 

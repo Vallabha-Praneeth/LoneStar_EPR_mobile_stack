@@ -1,10 +1,12 @@
+import type { CampaignLifecycleStatus } from '@/lib/campaign-lifecycle';
+import { deriveCampaignStatus } from '@/lib/campaign-lifecycle';
 import { supabase } from '@/lib/supabase';
 
 export type ReportCampaign = {
   id: string;
   title: string;
   campaign_date: string;
-  status: string;
+  status: CampaignLifecycleStatus;
   clients: { name: string } | null;
   driver_profile: { display_name: string } | null;
   campaign_photos: { id: string }[];
@@ -33,7 +35,11 @@ export async function fetchReportData(): Promise<ReportCampaign[]> {
     id: row.id,
     title: row.title,
     campaign_date: row.campaign_date,
-    status: row.status,
+    status: deriveCampaignStatus({
+      campaignDate: row.campaign_date as string,
+      rawStatus: row.status as string,
+      shifts: (row.driver_shifts ?? []) as Array<{ started_at?: string | null; ended_at?: string | null }>,
+    }),
     clients: normalize(row.clients),
     driver_profile: normalize(row.driver_profile),
     campaign_photos: (row.campaign_photos ?? []),

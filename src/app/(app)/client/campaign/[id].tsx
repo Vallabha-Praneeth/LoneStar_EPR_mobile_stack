@@ -3,19 +3,25 @@ import { Camera, Map, Marker } from '@maplibre/maplibre-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View as RNView,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CampaignStageProgress } from '@/components/campaign-stage-progress';
+import { DetachedMapModal } from '@/components/detached-map-modal';
 import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import { SpinnerAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
-import { Text, View } from '@/components/ui';
-import { ChevronLeft } from '@/components/ui/icons';
+import { RiveBackButton, Text, View } from '@/components/ui';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useDetachedMapExpand } from '@/components/use-detached-map-expand';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import {
   fetchClientCampaignPhotos,
@@ -27,11 +33,41 @@ import { useDriverPositionSubscriberSnapshot } from '@/lib/realtime/driver-locat
 import { useSmoothedLiveCoord } from '@/lib/realtime/live-map-motion';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const CARD_HEIGHT = 150;
 
 const clientMapStyles = StyleSheet.create({
-  map: { height: 150, borderRadius: 12, overflow: 'hidden' },
+  card: { height: CARD_HEIGHT, borderRadius: 12, overflow: 'hidden' },
+  cardMap: { flex: 1 },
+  fullMap: { flex: 1 },
   dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#3b82f6', borderWidth: 2, borderColor: '#fff' },
 });
+
+function ClientMapContent({
+  coord,
+  mapId,
+  fullscreen,
+}: {
+  coord: [number, number];
+  mapId: string;
+  fullscreen: boolean;
+}) {
+  return (
+    <Map
+      style={fullscreen ? clientMapStyles.fullMap : clientMapStyles.cardMap}
+      mapStyle={MAP_STYLE}
+      logo={false}
+      attribution={false}
+      dragPan={fullscreen}
+      touchZoom={fullscreen}
+      doubleTapZoom={fullscreen}
+    >
+      <Camera center={coord} zoom={14} duration={300} />
+      <Marker id={`client-driver-${mapId}`} lngLat={coord}>
+        <View style={clientMapStyles.dot} />
+      </Marker>
+    </Map>
+  );
+}
 
 function LiveDriverBanner({ shiftId }: { shiftId: string }) {
   const snapshot = useDriverPositionSubscriberSnapshot(shiftId);
@@ -42,31 +78,34 @@ function LiveDriverBanner({ shiftId }: { shiftId: string }) {
     return () => clearInterval(id);
   }, []);
   const isStale = snapshot != null && now - snapshot.ts > 60_000;
+  const cardRef = React.useRef<RNView>(null);
+  const { showModal, openMap, closeMap, expandedViewStyle, backdropStyle } = useDetachedMapExpand(cardRef, CARD_HEIGHT);
+
   return (
     <View className="gap-2 border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800">
       <DriverTransitBadge />
       {coord != null
         ? (
             <>
-              <Map
-                style={clientMapStyles.map}
-                mapStyle={MAP_STYLE}
-                logo={false}
-                attribution={false}
-                dragPan={false}
-                touchZoom={false}
-                doubleTapZoom={false}
-              >
-                <Camera center={coord} zoom={14} duration={300} />
-                <Marker id="client-driver" lngLat={coord}>
-                  <View style={clientMapStyles.dot} />
-                </Marker>
-              </Map>
+              <TouchableOpacity activeOpacity={0.9} onPress={openMap}>
+                <RNView ref={cardRef} style={clientMapStyles.card}>
+                  <ClientMapContent coord={coord} mapId="card" fullscreen={false} />
+                </RNView>
+              </TouchableOpacity>
               {isStale && (
                 <Text className="text-xs text-amber-500">
                   {`Last seen ${format(new Date(snapshot!.ts), 'h:mm a')}`}
                 </Text>
               )}
+
+              <DetachedMapModal
+                visible={showModal}
+                closeMap={closeMap}
+                expandedViewStyle={expandedViewStyle}
+                backdropStyle={backdropStyle}
+              >
+                <ClientMapContent coord={coord} mapId="full" fullscreen />
+              </DetachedMapModal>
             </>
           )
         : (
@@ -113,7 +152,6 @@ function PhotoCard({ photo, index }: { photo: ClientPhotoRow; index: number }) {
 
 export default function CampaignPhotosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const profile = useAuthStore.use.profile();
 
@@ -143,14 +181,7 @@ export default function CampaignPhotosScreen() {
         style={{ paddingTop: insets.top + 8 }}
       >
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-            accessibilityLabel="Go back"
-          >
-            <ChevronLeft color="#737373" width={18} height={18} />
-          </TouchableOpacity>
+          <RiveBackButton />
           <View className="flex-1 gap-0.5">
             <Text className="text-sm font-semibold" numberOfLines={1}>
               {campaign?.title ?? 'Campaign'}
