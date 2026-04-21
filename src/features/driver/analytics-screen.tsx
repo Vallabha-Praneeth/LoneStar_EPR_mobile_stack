@@ -10,6 +10,7 @@ import { FilterDrillBurst } from '@/components/motion';
 import { lottieAssets } from '@/components/motion/lottie-assets';
 import { Camera, CheckCircle, Clock, Truck, Users } from '@/components/ui/icons';
 import { RoleAnalyticsScreen } from '@/features/analytics/role-analytics-screen';
+import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { formatHours, formatNumber } from '@/lib/analytics';
 import {
@@ -24,13 +25,15 @@ import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 export function DriverAnalyticsScreen() {
   const router = useRouter();
   const profile = useAuthStore.use.profile();
+  const signOut = useAuthStore.use.signOut();
   const reducedMotion = useReducedMotion();
   const [range, setRange] = React.useState<AnalyticsRange>('1w');
   const [selectedClientId, setSelectedClientId] = React.useState<string>('');
   const [selectedCampaignId, setSelectedCampaignId] = React.useState<string>('');
-  const [clientBurstTrigger, setClientBurstTrigger] = React.useState<string | null>(null);
-  const [campaignBurstTrigger, setCampaignBurstTrigger] = React.useState<string | null>(null);
-  const [rangeBurstTrigger, setRangeBurstTrigger] = React.useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [filterBurstTrigger, setFilterBurstTrigger] = React.useState<string | null>(null);
+  const [filterBurstKind, setFilterBurstKind] = React.useState<'range' | 'client' | 'campaign'>('range');
+  const [filterBurstLabel, setFilterBurstLabel] = React.useState('Filter applied');
   const hasHandledInitialRangeRef = React.useRef(false);
   const { isTransitioning: isFilterTransitioning, startTransition: startFilterTransition } = useFilterTransition({ durationMs: 700 });
 
@@ -39,7 +42,9 @@ export function DriverAnalyticsScreen() {
       hasHandledInitialRangeRef.current = true;
       return;
     }
-    setRangeBurstTrigger(`range:${range}`);
+    setFilterBurstKind('range');
+    setFilterBurstLabel('Filter applied');
+    setFilterBurstTrigger(`range:${range}:${Date.now()}`);
     startFilterTransition();
   }, [range, startFilterTransition]);
 
@@ -123,42 +128,36 @@ export function DriverAnalyticsScreen() {
           label: 'Campaigns',
           value: `${summary.activeCampaigns} / ${summary.totalCampaigns}`,
           icon: <Truck color="#d97706" width={14} height={14} />,
-          iconBg: 'bg-amber-50 dark:bg-amber-950/40',
           valueColor: 'text-amber-700 dark:text-amber-400',
         },
         {
           label: 'Photos',
           value: formatNumber(summary.totalPhotos),
           icon: <Camera color="#1d4ed8" width={14} height={14} />,
-          iconBg: 'bg-blue-50 dark:bg-blue-950/40',
           valueColor: 'text-blue-700 dark:text-blue-400',
         },
         {
           label: 'Stops',
           value: formatNumber(summary.completedStops),
           icon: <CheckCircle color="#16a34a" width={14} height={14} />,
-          iconBg: 'bg-emerald-50 dark:bg-emerald-950/40',
           valueColor: 'text-emerald-700 dark:text-emerald-400',
         },
         {
           label: 'Hours',
           value: formatHours(summary.workedHours),
           icon: <Clock color="#dc2626" width={14} height={14} />,
-          iconBg: 'bg-red-50 dark:bg-red-950/40',
           valueColor: 'text-red-700 dark:text-red-400',
         },
         {
           label: 'Shifts',
           value: formatNumber(summary.shiftsWorked),
           icon: <Users color="#0891b2" width={14} height={14} />,
-          iconBg: 'bg-cyan-50 dark:bg-cyan-950/40',
           valueColor: 'text-cyan-700 dark:text-cyan-400',
         },
         {
           label: 'Avg Stops',
           value: avgStopsPerCampaign,
           icon: <Users color="#7c3aed" width={14} height={14} />,
-          iconBg: 'bg-violet-50 dark:bg-violet-950/40',
           valueColor: 'text-violet-700 dark:text-violet-400',
         },
       ]
@@ -194,6 +193,7 @@ export function DriverAnalyticsScreen() {
         range={range}
         onRangeChange={setRange}
         onBack={() => router.back()}
+        onSignOut={() => setConfirmOpen(true)}
         cards={cards}
         primarySection={{
           title: 'Top Campaigns by Photos',
@@ -219,7 +219,9 @@ export function DriverAnalyticsScreen() {
             onChange: (next) => {
               setSelectedClientId(next);
               setSelectedCampaignId('');
-              setClientBurstTrigger(`client:${next || 'all'}:${Date.now()}`);
+              setFilterBurstKind('client');
+              setFilterBurstLabel('Client filter applied');
+              setFilterBurstTrigger(`client:${next || 'all'}:${Date.now()}`);
               startFilterTransition();
             },
           },
@@ -230,25 +232,33 @@ export function DriverAnalyticsScreen() {
             options: campaignFilterOptions,
             onChange: (next) => {
               setSelectedCampaignId(next);
-              setCampaignBurstTrigger(`campaign:${next || 'all'}:${Date.now()}`);
+              setFilterBurstKind('campaign');
+              setFilterBurstLabel('Campaign filter applied');
+              setFilterBurstTrigger(`campaign:${next || 'all'}:${Date.now()}`);
               startFilterTransition();
             },
           },
         ]}
       />
       <FilterDrillBurst
-        trigger={rangeBurstTrigger}
-        accessibilityLabel="Filter applied"
+        trigger={filterBurstTrigger}
+        accessibilityLabel={filterBurstLabel}
+        // Mapping contract: range->advanced, client->dataAnalytics, campaign->dataExtraction.
+        source={filterBurstKind === 'range'
+          ? lottieAssets.advancedAnalytics
+          : filterBurstKind === 'client'
+            ? lottieAssets.dataAnalyticsAndResearch
+            : filterBurstKind === 'campaign'
+              ? lottieAssets.dataExtraction
+              : lottieAssets.advancedAnalytics}
       />
-      <FilterDrillBurst
-        trigger={clientBurstTrigger}
-        accessibilityLabel="Client filter applied"
-        source={lottieAssets.dataAnalyticsAndResearch}
-      />
-      <FilterDrillBurst
-        trigger={campaignBurstTrigger}
-        accessibilityLabel="Campaign filter applied"
-        source={lottieAssets.dataExtraction}
+      <LogoutConfirmDialog
+        visible={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          void signOut();
+        }}
       />
     </>
   );

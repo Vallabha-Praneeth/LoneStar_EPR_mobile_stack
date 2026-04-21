@@ -13,10 +13,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
+import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { SearchBar } from '@/components/search-bar';
-import { Text, View } from '@/components/ui';
+import { Card, Text, View } from '@/components/ui';
 import { Modal, useModal } from '@/components/ui/modal';
+import { uiPolishClasses, uiPolishStyles } from '@/components/ui/polish-system';
 import { fetchClients } from '@/lib/api/admin/selectors';
 import { createClientUser, createDriver, fetchUsers, resetUserPassword, toggleUserActive } from '@/lib/api/admin/users';
 
@@ -47,7 +49,7 @@ function UserCard({
   const roleText = ROLE_TEXT[item.role] ?? 'text-neutral-600';
 
   return (
-    <View className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
+    <Card className="rounded-2xl border-neutral-200/85 p-4">
       <View className="mb-2 flex-row items-center justify-between">
         <View className="flex-1 flex-row items-center gap-2">
           <Text className="font-semibold" numberOfLines={1}>{item.display_name}</Text>
@@ -92,7 +94,7 @@ function UserCard({
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -365,32 +367,7 @@ function ResetPasswordForm({ user, onSuccess }: { user: UserRow; onSuccess: () =
   );
 }
 
-function UsersHeader({ onAddClient, onAddDriver }: { onAddClient: () => void; onAddDriver: () => void }) {
-  return (
-    <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
-      <View className="flex-row items-center gap-2">
-        <View className="size-7 items-center justify-center rounded-lg bg-primary">
-          <Text className="text-xs font-bold text-white">AD</Text>
-        </View>
-        <Text className="text-base font-semibold">Users</Text>
-      </View>
-      <View className="flex-row items-center gap-2">
-        <AdminSettingsGearButton />
-        <TouchableOpacity onPress={onAddClient}>
-          <View className="rounded-lg border border-primary px-3 py-1.5">
-            <Text className="text-xs font-semibold text-primary">+ Client</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onAddDriver}>
-          <View className="rounded-lg bg-primary px-3 py-1.5">
-            <Text className="text-xs font-semibold text-white">+ Driver</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
+// eslint-disable-next-line max-lines-per-function
 export function UsersScreen() {
   const [search, setSearch] = React.useState('');
   const [resetTarget, setResetTarget] = React.useState<UserRow | null>(null);
@@ -438,10 +415,28 @@ export function UsersScreen() {
   }
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
-      <UsersHeader onAddClient={() => createClientUserModal.present()} onAddDriver={() => createDriverModal.present()} />
+    <View className={uiPolishClasses.screenBg}>
+      <AdminHeader
+        title="Users"
+        showBack={false}
+        right={(
+          <View className="flex-row items-center gap-2">
+            <AdminSettingsGearButton />
+            <TouchableOpacity onPress={() => createClientUserModal.present()}>
+              <View className="rounded-lg border border-primary px-3 py-1.5">
+                <Text className="text-xs font-semibold text-primary">+ Client</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => createDriverModal.present()}>
+              <View className="rounded-lg bg-primary px-3 py-1.5">
+                <Text className="text-xs font-semibold text-white">+ Driver</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+      />
 
-      <View className="px-4 pt-3">
+      <View className={uiPolishClasses.sectionWrap}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search users..." />
       </View>
 
@@ -458,7 +453,7 @@ export function UsersScreen() {
               renderItem={({ item }) => (
                 <UserCard item={item} onToggle={handleToggle} onResetPassword={handleResetPassword} isPending={toggleMutation.isPending} />
               )}
-              contentContainerStyle={{ padding: 16, gap: 12 }}
+              contentContainerStyle={uiPolishStyles.listContent}
               ListEmptyComponent={(
                 <View className="items-center py-16">
                   <Text className="text-sm text-neutral-500">No users found</Text>

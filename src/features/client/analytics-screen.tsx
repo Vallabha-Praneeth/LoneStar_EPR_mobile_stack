@@ -11,6 +11,7 @@ import { lottieAssets } from '@/components/motion/lottie-assets';
 import { Camera, CheckCircle, Clock, Truck, Users } from '@/components/ui/icons';
 import { showErrorMessage } from '@/components/ui/utils';
 import { RoleAnalyticsScreen } from '@/features/analytics/role-analytics-screen';
+import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { formatHours, formatNumber } from '@/lib/analytics';
 import {
@@ -26,23 +27,25 @@ import { exportReportsCsvForTab } from '@/lib/reports/tab-report-export-flow';
 export function ClientAnalyticsScreen() {
   const router = useRouter();
   const profile = useAuthStore.use.profile();
+  const signOut = useAuthStore.use.signOut();
   const clientId = profile?.client_id ?? undefined;
   const reducedMotion = useReducedMotion();
   const [range, setRange] = React.useState<AnalyticsRange>('1w');
   const [selectedCampaignId, setSelectedCampaignId] = React.useState<string>('');
+  const [filterBurstKind, setFilterBurstKind] = React.useState<'range' | 'campaign'>('range');
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [filterBurstTrigger, setFilterBurstTrigger] = React.useState<string | null>(null);
   const [burstVisible, setBurstVisible] = React.useState(false);
   const { isTransitioning: isFilterTransitioning, startTransition: startFilterTransition } = useFilterTransition({ durationMs: 700 });
   const hasHandledInitialRangeRef = React.useRef(false);
-  const filterKey = React.useMemo(
-    () => `range:${range}|campaign:${selectedCampaignId || 'all'}`,
-    [range, selectedCampaignId],
-  );
 
   React.useEffect(() => {
     if (!hasHandledInitialRangeRef.current) {
       hasHandledInitialRangeRef.current = true;
       return;
     }
+    setFilterBurstKind('range');
+    setFilterBurstTrigger(`range:${range}:${Date.now()}`);
     startFilterTransition();
   }, [range, startFilterTransition]);
 
@@ -130,42 +133,36 @@ export function ClientAnalyticsScreen() {
           label: 'Campaigns',
           value: formatNumber(summary.totalCampaigns),
           icon: <Truck color="#d97706" width={14} height={14} />,
-          iconBg: 'bg-amber-50 dark:bg-amber-950/40',
           valueColor: 'text-amber-700 dark:text-amber-400',
         },
         {
           label: 'In Flight',
           value: formatNumber(summary.activeCampaigns),
           icon: <Users color="#0891b2" width={14} height={14} />,
-          iconBg: 'bg-cyan-50 dark:bg-cyan-950/40',
           valueColor: 'text-cyan-700 dark:text-cyan-400',
         },
         {
           label: 'Completed',
           value: formatNumber(summary.completedCampaigns),
           icon: <CheckCircle color="#16a34a" width={14} height={14} />,
-          iconBg: 'bg-emerald-50 dark:bg-emerald-950/40',
           valueColor: 'text-emerald-700 dark:text-emerald-400',
         },
         {
           label: 'Photos',
           value: formatNumber(summary.totalPhotos),
           icon: <Camera color="#1d4ed8" width={14} height={14} />,
-          iconBg: 'bg-blue-50 dark:bg-blue-950/40',
           valueColor: 'text-blue-700 dark:text-blue-400',
         },
         {
           label: 'Shifts',
           value: formatNumber(summary.shiftsObserved),
           icon: <Clock color="#dc2626" width={14} height={14} />,
-          iconBg: 'bg-red-50 dark:bg-red-950/40',
           valueColor: 'text-red-700 dark:text-red-400',
         },
         {
           label: 'Hours',
           value: formatHours(summary.workedHours),
           icon: <Truck color="#7c3aed" width={14} height={14} />,
-          iconBg: 'bg-violet-50 dark:bg-violet-950/40',
           valueColor: 'text-violet-700 dark:text-violet-400',
         },
       ]
@@ -201,6 +198,7 @@ export function ClientAnalyticsScreen() {
         range={range}
         onRangeChange={setRange}
         onBack={() => router.back()}
+        onSignOut={() => setConfirmOpen(true)}
         onExportCsv={() => exportMutation.mutate()}
         isExportingCsv={exportMutation.isPending}
         disableExportCsv={exportRows.length === 0}
@@ -228,16 +226,30 @@ export function ClientAnalyticsScreen() {
             options: campaignFilterOptions,
             onChange: (next) => {
               setSelectedCampaignId(next);
+              setFilterBurstKind('campaign');
+              setFilterBurstTrigger(`campaign:${next || 'all'}:${Date.now()}`);
               startFilterTransition();
             },
           },
         ]}
       />
       <FilterDrillBurst
-        trigger={filterKey}
+        trigger={filterBurstTrigger}
         accessibilityLabel="Filter applied"
+        // Mapping contract: range->advanced, campaign->dataExtraction.
+        source={filterBurstKind === 'campaign'
+          ? lottieAssets.dataExtraction
+          : lottieAssets.advancedAnalytics}
       />
       <ExportSuccessBurst visible={burstVisible} onHide={() => setBurstVisible(false)} />
+      <LogoutConfirmDialog
+        visible={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          void signOut();
+        }}
+      />
     </>
   );
 }

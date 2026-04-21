@@ -6,8 +6,10 @@ import * as React from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation';
 import { emptyStatePresets, lottieAssets } from '@/components/motion';
-import { Text, View } from '@/components/ui';
-import { CheckCircle, ChevronLeft, Clock, LogOut } from '@/components/ui/icons';
+import { RiveBackButton, Text, View } from '@/components/ui';
+import { CheckCircle, Clock, LogOut } from '@/components/ui/icons';
+import { LiquidIconBadge } from '@/components/ui/liquid-icon-badge';
+import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchClientTimingShifts, hoursForShift } from '@/lib/api/client/timing';
 
@@ -38,14 +40,12 @@ function TimingShiftCard({
       <Text className="mb-4 text-sm text-neutral-500">{dateLabel}</Text>
       {rows.map(item => (
         <View key={item.label} className="flex-row items-center gap-3 border-b border-neutral-100 py-3 last:border-b-0 dark:border-neutral-700">
-          <View
-            className={`size-8 items-center justify-center rounded-full ${
-              item.done ? 'bg-green-100 dark:bg-green-900/30' : 'bg-neutral-100 dark:bg-neutral-700'
-            }`}
-          >
-            {item.done
-              ? <CheckCircle color="#16a34a" width={16} height={16} />
-              : <Clock color="#a3a3a3" width={16} height={16} />}
+          <View className="size-8 items-center justify-center">
+            <LiquidIconBadge size={30} radius={15}>
+              {item.done
+                ? <CheckCircle color="#16a34a" width={16} height={16} />
+                : <Clock color="#a3a3a3" width={16} height={16} />}
+            </LiquidIconBadge>
           </View>
           <View className="flex-1">
             <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{item.label}</Text>
@@ -66,6 +66,7 @@ function TimingShiftCard({
 export function TimingSheetScreen() {
   const router = useRouter();
   const signOut = useAuthStore.use.signOut();
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const profile = useAuthStore.use.profile();
   const clientId = profile?.client_id ?? null;
 
@@ -79,18 +80,11 @@ export function TimingSheetScreen() {
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
         <View className="flex-row items-center gap-2">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-            accessibilityLabel="Back"
-          >
-            <ChevronLeft color="#737373" width={22} height={22} />
-          </TouchableOpacity>
+          <RiveBackButton onPress={() => router.back()} />
           <Text className="text-base font-semibold">Timing sheet</Text>
         </View>
         <TouchableOpacity
-          onPress={signOut}
+          onPress={() => setConfirmOpen(true)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
           accessibilityLabel="Sign out"
@@ -139,6 +133,14 @@ export function TimingSheetScreen() {
           ))}
         </ScrollView>
       )}
+      <LogoutConfirmDialog
+        visible={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          signOut();
+        }}
+      />
     </View>
   );
 }

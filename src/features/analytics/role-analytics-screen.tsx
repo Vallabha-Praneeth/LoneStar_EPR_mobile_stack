@@ -11,8 +11,10 @@ import { EmptyStateWithAnimation } from '@/components/empty-state-with-animation
 import { emptyStatePresets, ListPaginationAnimation, lottieAssets } from '@/components/motion';
 import { RiveBackButton, Text, View } from '@/components/ui';
 import { HorizontalBarChart } from '@/components/ui/horizontal-bar-chart';
-import { Share as ShareIcon } from '@/components/ui/icons';
+import { LogOut, Share as ShareIcon } from '@/components/ui/icons';
+import { LiquidIconBadge } from '@/components/ui/liquid-icon-badge';
 import { useModal } from '@/components/ui/modal';
+import { uiPolishClasses, uiPolishSpacing } from '@/components/ui/polish-system';
 import { Options } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { storage } from '@/lib/storage';
@@ -30,7 +32,6 @@ type AnalyticsCard = {
   label: string;
   value: string;
   icon: React.ReactNode;
-  iconBg: string;
   valueColor?: string;
 };
 
@@ -54,6 +55,7 @@ type RoleAnalyticsScreenProps = {
   hasData: boolean;
   emptyMessage: string;
   onExportCsv?: () => void;
+  onSignOut?: () => void;
   isExportingCsv?: boolean;
   disableExportCsv?: boolean;
   extraFilters?: RoleAnalyticsDropdownFilter[];
@@ -213,12 +215,14 @@ function RangeFilterBubbleIcon({ isDark = false }: { isDark?: boolean }) {
   );
 }
 
+// eslint-disable-next-line max-lines-per-function
 function AnalyticsHeader({
   title,
   range,
   onRangeChange,
   onBack,
   onExportCsv,
+  onSignOut,
   isExportingCsv = false,
   disableExportCsv = false,
   isDark = false,
@@ -231,6 +235,7 @@ function AnalyticsHeader({
   onRangeChange: (range: AnalyticsRange) => void;
   onBack: () => void;
   onExportCsv?: () => void;
+  onSignOut?: () => void;
   isExportingCsv?: boolean;
   disableExportCsv?: boolean;
   isDark?: boolean;
@@ -242,7 +247,7 @@ function AnalyticsHeader({
 
   return (
     <View
-      className="border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+      className={uiPolishClasses.headerShell}
       style={{ paddingTop: insets.top + 8 }}
     >
       <View className="flex-row items-center justify-between px-4 pb-3">
@@ -256,6 +261,23 @@ function AnalyticsHeader({
           </View>
         </View>
         <View className="flex-row items-center gap-2">
+          {onSignOut
+            ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign out"
+                  onPress={onSignOut}
+                  className="rounded-lg px-2 py-1"
+                  style={[
+                    styles.glassControlButton,
+                    isDark ? styles.glassControlButtonDark : styles.glassControlButtonLight,
+                    contrastMode === 'high' ? (isDark ? styles.glassControlButtonDarkHigh : styles.glassControlButtonLightHigh) : null,
+                  ]}
+                >
+                  <LogOut width={14} height={14} />
+                </Pressable>
+              )
+            : null}
           {onExportCsv
             ? (
                 <Pressable
@@ -327,20 +349,21 @@ function KpiCard({
   label,
   value,
   icon,
-  iconBg,
   valueColor,
   isDark = false,
   contrastMode = 'balanced',
 }: AnalyticsCard & { isDark?: boolean; contrastMode?: GlassContrastMode }) {
   return (
     <LiquidGlassSurface contentClassName="flex-1 p-3" isDark={isDark} contrastMode={contrastMode}>
-      <View className={`mb-2 size-7 items-center justify-center rounded-lg ${iconBg}`}>
-        {icon}
+      <View className="mb-2 flex-row items-center gap-2">
+        <LiquidIconBadge size={28} radius={10}>{icon}</LiquidIconBadge>
+        <View className="rounded-md border border-neutral-300/75 bg-neutral-100/85 px-2 py-1 dark:border-neutral-600 dark:bg-neutral-700/65">
+          <Text className="text-[11px] font-semibold tracking-wide text-neutral-700 uppercase dark:text-neutral-200">
+            {label}
+          </Text>
+        </View>
       </View>
-      <Text className={`text-lg font-bold text-neutral-900 dark:text-neutral-100 ${valueColor ?? ''}`}>{value}</Text>
-      <Text className="text-[10px] font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
-        {label}
-      </Text>
+      <Text className={`text-[22px] leading-[26px] font-bold text-neutral-900 dark:text-neutral-100 ${valueColor ?? ''}`}>{value}</Text>
     </LiquidGlassSurface>
   );
 }
@@ -404,6 +427,7 @@ export function RoleAnalyticsScreen({
   hasData,
   emptyMessage,
   onExportCsv,
+  onSignOut,
   isExportingCsv,
   disableExportCsv,
   extraFilters,
@@ -438,6 +462,7 @@ export function RoleAnalyticsScreen({
         onRangeChange={onRangeChange}
         onBack={onBack}
         onExportCsv={onExportCsv}
+        onSignOut={onSignOut}
         isExportingCsv={isExportingCsv}
         disableExportCsv={disableExportCsv}
         isDark={isDark}
@@ -461,7 +486,7 @@ export function RoleAnalyticsScreen({
         </View>
       )}
       {!isLoading && !isError && !suppressContent && (
-        <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: insets.bottom + 18 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: uiPolishSpacing.screenPadding, paddingBottom: insets.bottom + uiPolishSpacing.screenPadding }} showsVerticalScrollIndicator={false}>
           {hasData
             ? (
                 <>
