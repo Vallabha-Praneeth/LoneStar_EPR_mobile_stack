@@ -42,7 +42,7 @@ function GlassRefractionLayer() {
 
 export function BrandLogo({
   size = 24,
-  accessibilityLabel = 'AdTruck',
+  accessibilityLabel = 'LoneStar Fleet',
 }: BrandLogoProps) {
   const radius = Math.max(10, Math.round(size * 0.38));
   const continuousCurve = Platform.OS === 'ios'

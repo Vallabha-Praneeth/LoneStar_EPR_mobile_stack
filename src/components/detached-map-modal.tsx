@@ -1,7 +1,6 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import * as React from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
-import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
@@ -32,24 +31,23 @@ export function DetachedMapModal({
       animationType="none"
       onRequestClose={closeMap}
     >
-      <GestureHandlerRootView style={styles.modalRoot}>
+      <View style={styles.modalRoot}>
         <Animated.View style={[styles.backdrop, backdropStyle]} pointerEvents="none" />
         <Animated.View style={expandedViewStyle}>
           <View style={styles.mapLayer}>
             {children}
           </View>
-          <View style={styles.overlay} pointerEvents="box-none">
-            <Pressable
-              onPress={closeMap}
-              style={[styles.closeButton, { top: insets.top + 8, right: 20 }]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Minimize map"
-            >
-              <Text style={styles.closeLabel}>✕</Text>
-            </Pressable>
-          </View>
         </Animated.View>
-      </GestureHandlerRootView>
+        <Pressable
+          onPress={closeMap}
+          style={[styles.closeButton, { top: insets.top + 8, right: 20 }]}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityLabel="Minimize map"
+          accessibilityRole="button"
+        >
+          <Text style={styles.closeLabel}>✕</Text>
+        </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -59,12 +57,7 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-  mapLayer: { flex: 1, zIndex: 0 },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 10,
-    elevation: 10,
-  },
+  mapLayer: { flex: 1 },
   closeButton: {
     position: 'absolute',
     width: 44,

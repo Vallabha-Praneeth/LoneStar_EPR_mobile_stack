@@ -125,7 +125,7 @@ export function AppLogo({ size = 'sm', showText = true }: AppLogoProps) {
         </View>
       </View>
       {showText && (
-        <Text className={`${s.text} font-bold tracking-tight`}>AdTruck</Text>
+        <Text className={`${s.text} font-bold tracking-tight`}>LoneStar Fleet</Text>
       )}
     </View>
   );

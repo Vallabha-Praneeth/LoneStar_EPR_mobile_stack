@@ -45,13 +45,32 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   assetBundlePatterns: ['**/*'],
   ios: {
-    supportsTablet: true,
+    supportsTablet: false,
     bundleIdentifier: Env.EXPO_PUBLIC_BUNDLE_ID,
+    associatedDomains: Env.EXPO_PUBLIC_ASSOCIATED_DOMAIN
+      ? [`applinks:${new URL(Env.EXPO_PUBLIC_ASSOCIATED_DOMAIN).host}`]
+      : undefined,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      NSLocationWhenInUseUsageDescription: 'AdTruck uses your location to show your position on the route map.',
-      NSLocationAlwaysAndWhenInUseUsageDescription: 'AdTruck continues tracking your location in the background so your position is visible to the admin during your shift.',
+      NSLocationWhenInUseUsageDescription:
+        'LoneStar Fleet uses your location to show your position on the route map during a shift.',
+      NSLocationAlwaysAndWhenInUseUsageDescription:
+        'LoneStar Fleet continues tracking your location in the background so your dispatcher can see your position during an active shift. Tracking stops when you end your shift.',
+      NSLocationAlwaysUsageDescription:
+        'LoneStar Fleet continues tracking your location in the background so your dispatcher can see your position during an active shift. Tracking stops when you end your shift.',
       UIBackgroundModes: ['location'],
+    },
+    privacyManifests: {
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
+          NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+        },
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+          NSPrivacyAccessedAPITypeReasons: ['C617.1'],
+        },
+      ],
     },
   },
   experiments: {
@@ -63,6 +82,28 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#2E3C4B',
     },
     package: Env.EXPO_PUBLIC_PACKAGE,
+    allowBackup: false,
+    blockedPermissions: [
+      'android.permission.RECORD_AUDIO',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
+    intentFilters: Env.EXPO_PUBLIC_ASSOCIATED_DOMAIN
+      ? [
+          {
+            action: 'VIEW',
+            autoVerify: true,
+            data: [
+              {
+                scheme: 'https',
+                host: new URL(Env.EXPO_PUBLIC_ASSOCIATED_DOMAIN).host,
+              },
+            ],
+            category: ['BROWSABLE', 'DEFAULT'],
+          },
+        ]
+      : undefined,
   },
   web: {
     favicon: './assets/favicon.png',
@@ -119,7 +160,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationAlwaysAndWhenInUsePermission: 'AdTruck continues tracking your location in the background so your position is visible to the admin during your shift.',
+        locationAlwaysAndWhenInUsePermission:
+          'LoneStar Fleet continues tracking your location in the background so your dispatcher can see your position during an active shift. Tracking stops when you end your shift.',
         isAndroidBackgroundLocationEnabled: true,
       },
     ],
@@ -128,8 +170,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-image-picker',
       {
-        photosPermission: 'Used to select campaign photos.',
-        cameraPermission: 'Used to photograph campaign placements.',
+        photosPermission: 'LoneStar Fleet needs access to your photos to attach campaign placement shots to your report.',
+        cameraPermission: 'LoneStar Fleet needs camera access to photograph your campaign placement.',
+        microphonePermission: false,
       },
     ],
     ['app-icon-badge', appIconBadgeConfig],

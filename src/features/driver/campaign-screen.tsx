@@ -19,8 +19,10 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useDetachedMapExpand } from '@/components/use-detached-map-expand';
 import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore } from '@/features/auth/use-auth-store';
+import { BackgroundLocationBanner } from '@/features/driver/components/background-location-banner';
 import { DriverLaunchSplash } from '@/features/driver/components/driver-launch-splash';
 import { StopTransitOverlay } from '@/features/driver/components/stop-transit-overlay';
+import { useBackgroundLocationPermission } from '@/features/driver/hooks/use-background-location-permission';
 import {
   endShift,
   fetchDriverCampaign,
@@ -997,6 +999,8 @@ type ActiveCampaignProps = {
   onMove: (idx: number, dir: 'up' | 'down') => void;
   nearbyStopId: string | null;
   dismissNudge: (stopId: string) => void;
+  showBackgroundLocationBanner: boolean;
+  onOpenLocationSettings: () => void;
 };
 
 function ActiveCampaignView({
@@ -1017,6 +1021,8 @@ function ActiveCampaignView({
   onMove,
   nearbyStopId,
   dismissNudge,
+  showBackgroundLocationBanner,
+  onOpenLocationSettings,
 }: ActiveCampaignProps) {
   const router = useRouter();
   const nearbyIdx = nearbyStopId != null ? items.findIndex(it => it.stop.id === nearbyStopId) : -1;
@@ -1040,6 +1046,9 @@ function ActiveCampaignView({
         contentContainerStyle={{ padding: 16, gap: 16 }}
         contentInsetAdjustmentBehavior="automatic"
       >
+        {showBackgroundLocationBanner && (
+          <BackgroundLocationBanner onOpenSettings={onOpenLocationSettings} />
+        )}
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -1138,6 +1147,18 @@ export function CampaignScreen() {
   const { nearbyStopId, dismissNudge } = useProximityNudge(driverCoord, items);
   useDevRouteSimulation(campaign ?? null, activeShiftId, setDriverCoord);
   useDriverPositionPublisher(activeShiftId, driverCoord);
+  const {
+    osStatus: bgLocationOsStatus,
+    decision: bgLocationDecision,
+    requestWithDisclosure: requestBgLocationWithDisclosure,
+    openSettings: openBgLocationSettings,
+  } = useBackgroundLocationPermission();
+  const requestBgLocationRef = React.useRef(requestBgLocationWithDisclosure);
+  requestBgLocationRef.current = requestBgLocationWithDisclosure;
+  const showBgLocationBanner
+    = !!activeShiftId
+      && (bgLocationOsStatus === 'denied'
+        || (bgLocationOsStatus === 'undetermined' && bgLocationDecision === 'declined'));
   React.useEffect(() => {
     if (!activeShiftId) {
       clearTrackingBlock();
@@ -1170,11 +1191,10 @@ export function CampaignScreen() {
           pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
         );
 
-        // Request background permission (Android 10+ requires a separate prompt
-        // after foreground is granted; iOS handles it via NSLocationAlwaysAndWhenInUse)
-        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+        // Prominent Disclosure (Play policy) gates the OS background prompt.
+        // Hook respects a prior Decline — no re-prompt, no loop. Foreground still runs.
+        const bgStatus = await requestBgLocationRef.current();
         if (bgStatus !== 'granted') {
-          // Foreground tracking still works — background broadcast won't fire
           return;
         }
 
@@ -1287,6 +1307,8 @@ export function CampaignScreen() {
         onMove={moveStop}
         nearbyStopId={nearbyStopId}
         dismissNudge={dismissNudge}
+        showBackgroundLocationBanner={showBgLocationBanner}
+        onOpenLocationSettings={openBgLocationSettings}
       />
       <ShiftStartBurst visible={burstVisible} onComplete={handleShiftStartBurstComplete} />
       {logoutDialog}
