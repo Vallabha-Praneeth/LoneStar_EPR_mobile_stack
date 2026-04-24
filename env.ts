@@ -28,24 +28,28 @@ const EXPO_PUBLIC_APP_ENV = (process.env.EXPO_PUBLIC_APP_ENV
   ?? 'development') as z.infer<typeof envSchema>['EXPO_PUBLIC_APP_ENV'];
 
 const BUNDLE_IDS = {
-  development: 'com.adtruck-driver-native.development',
-  preview: 'com.adtruck-driver-native.preview',
-  production: 'com.adtruck-driver-native',
+  development: 'com.quantumops.lonestarerp.driver.development',
+  preview: 'com.quantumops.lonestarerp.driver.preview',
+  production: 'com.quantumops.lonestarerp.driver',
 } as const;
 
 const PACKAGES = {
-  development: 'com.adtruck_driver_native.development',
-  preview: 'com.adtruck_driver_native.preview',
-  production: 'com.adtruck_driver_native',
+  development: 'com.quantumops.lonestarerp.driver.development',
+  preview: 'com.quantumops.lonestarerp.driver.preview',
+  production: 'com.quantumops.lonestarerp.driver',
 } as const;
 
 const SCHEMES = {
-  development: 'adtruck-driver-native',
-  preview: 'adtruck-driver-native.preview',
-  production: 'adtruck-driver-native',
+  development: 'lonestar-fleet-dev',
+  preview: 'lonestar-fleet-preview',
+  production: 'lonestar-fleet',
 } as const;
 
-const NAME = 'adtruck-driver-native';
+const NAMES = {
+  development: 'LoneStar Fleet (Dev)',
+  preview: 'LoneStar Fleet (Preview)',
+  production: 'LoneStar Fleet',
+} as const;
 
 // Check if strict validation is required (before prebuild)
 const STRICT_ENV_VALIDATION = process.env.STRICT_ENV_VALIDATION === '1';
@@ -53,7 +57,7 @@ const STRICT_ENV_VALIDATION = process.env.STRICT_ENV_VALIDATION === '1';
 // Build env object
 const _env: z.infer<typeof envSchema> = {
   EXPO_PUBLIC_APP_ENV,
-  EXPO_PUBLIC_NAME: NAME,
+  EXPO_PUBLIC_NAME: NAMES[EXPO_PUBLIC_APP_ENV],
   EXPO_PUBLIC_SCHEME: SCHEMES[EXPO_PUBLIC_APP_ENV],
   EXPO_PUBLIC_BUNDLE_ID: BUNDLE_IDS[EXPO_PUBLIC_APP_ENV],
   EXPO_PUBLIC_PACKAGE: PACKAGES[EXPO_PUBLIC_APP_ENV],

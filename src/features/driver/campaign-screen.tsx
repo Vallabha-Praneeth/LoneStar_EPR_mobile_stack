@@ -7,17 +7,22 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import * as React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, View as RNView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { AppLogo } from '@/components/app-logo';
-import { SpinnerAnimation, TruckAnimation } from '@/components/motion';
+import { DetachedMapModal } from '@/components/detached-map-modal';
+import { ShiftStartBurst, SpinnerAnimation, TruckAnimation } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
-import { Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
+import { BarChart, Camera, CaretDown, Clock, LogOut, Play, StopCircle } from '@/components/ui/icons';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useDetachedMapExpand } from '@/components/use-detached-map-expand';
+import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore } from '@/features/auth/use-auth-store';
+import { BackgroundLocationBanner } from '@/features/driver/components/background-location-banner';
 import { DriverLaunchSplash } from '@/features/driver/components/driver-launch-splash';
 import { StopTransitOverlay } from '@/features/driver/components/stop-transit-overlay';
+import { useBackgroundLocationPermission } from '@/features/driver/hooks/use-background-location-permission';
 import {
   endShift,
   fetchDriverCampaign,
@@ -94,22 +99,45 @@ function CampaignHeader({ right }: { right: React.ReactNode }) {
   );
 }
 
+function CampaignHeaderActions({
+  status,
+  onAnalytics,
+  onSignOut,
+}: {
+  status?: React.ReactNode;
+  onAnalytics: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <View className="flex-row items-center gap-2">
+      {status}
+      <ThemeToggle />
+      <TouchableOpacity
+        onPress={onAnalytics}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+        accessibilityLabel="Open analytics"
+      >
+        <BarChart color="#737373" width={18} height={18} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onSignOut}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+      >
+        <LogOut color="#737373" width={18} height={18} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function EmptyCampaignState({ onSignOut }: { onSignOut: () => void }) {
+  const router = useRouter();
+
   return (
     <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
-        right={(
-          <View className="flex-row items-center gap-2">
-            <ThemeToggle />
-            <TouchableOpacity
-              onPress={onSignOut}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-            >
-              <LogOut color="#737373" width={18} height={18} />
-            </TouchableOpacity>
-          </View>
-        )}
+        right={<CampaignHeaderActions onAnalytics={() => router.push('/(app)/driver-analytics')} onSignOut={onSignOut} />}
       />
       <View className="flex-1 items-center justify-center p-6">
         <MotiView
@@ -372,6 +400,7 @@ function PastCampaignsAccordion({ driverId }: { driverId: string }) {
 
 const mapStyles = StyleSheet.create({
   map: { height: 200 },
+  fullMap: { flex: 1 },
   markerDot: {
     width: 22,
     height: 22,
@@ -422,6 +451,85 @@ function useCameraAdvance(
   return initialCenter;
 }
 
+function RouteMapContent({
+  cameraRef,
+  initialCenter,
+  lineGeoJson,
+  stopsWithCoords,
+  nearbyStopId,
+  driverCoord,
+  fullscreen,
+}: {
+  cameraRef?: React.RefObject<any>;
+  initialCenter: [number, number];
+  lineGeoJson: GeoJSON.Feature<GeoJSON.LineString>;
+  stopsWithCoords: StopState[];
+  nearbyStopId: string | null;
+  driverCoord: [number, number] | null;
+  fullscreen: boolean;
+}) {
+  return (
+    <MLMap
+      style={fullscreen ? mapStyles.fullMap : mapStyles.map}
+      mapStyle={MAP_STYLE_URL}
+      logo={false}
+      attribution={false}
+      dragPan={fullscreen}
+      touchZoom={fullscreen}
+      doubleTapZoom={fullscreen}
+    >
+      <MLCamera
+        ref={cameraRef}
+        center={initialCenter}
+        zoom={12}
+      />
+      <GeoJSONSource id={fullscreen ? 'route-line-source-full' : 'route-line-source-card'} data={lineGeoJson}>
+        <Layer
+          id={fullscreen ? 'route-line-full' : 'route-line-card'}
+          type="line"
+          paint={{ 'line-color': '#3b82f6', 'line-width': 2, 'line-dasharray': [4, 2] }}
+        />
+      </GeoJSONSource>
+      {stopsWithCoords.map((it, i) => {
+        const { stop, done, skipped } = it;
+        const isNearby = stop.id === nearbyStopId;
+        const bg = done ? '#16a34a' : skipped ? '#a3a3a3' : isNearby ? '#f59e0b' : '#3b82f6';
+        const label = done ? '✓' : skipped ? '×' : String(i + 1);
+        return (
+          <Marker key={stop.id} id={`${fullscreen ? 'full' : 'card'}-stop-${i}`} lngLat={[stop.longitude!, stop.latitude!]}>
+            <View style={[mapStyles.markerDot, { backgroundColor: bg }]}>
+              {isNearby && (
+                <MotiView
+                  from={{ scale: 1, opacity: 0.6 }}
+                  animate={{ scale: 2, opacity: 0 }}
+                  transition={{ type: 'timing', duration: 1100, loop: true }}
+                  style={[StyleSheet.absoluteFillObject, { borderRadius: 11, backgroundColor: '#f59e0b' }]}
+                />
+              )}
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
+            </View>
+          </Marker>
+        );
+      })}
+      {driverCoord != null
+        ? (
+            <Marker id={fullscreen ? 'driver-pos-full' : 'driver-pos-card'} lngLat={driverCoord}>
+              <View style={{ width: 16, height: 16 }}>
+                <MotiView
+                  from={{ scale: 1, opacity: 0.5 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ type: 'timing', duration: 1100, loop: true }}
+                  style={[mapStyles.driverDot, { position: 'absolute' }]}
+                />
+                <View style={mapStyles.driverDot} />
+              </View>
+            </Marker>
+          )
+        : null}
+    </MLMap>
+  );
+}
+
 function RouteMapCard({
   items,
   driverCoord,
@@ -432,10 +540,18 @@ function RouteMapCard({
   nearbyStopId: string | null;
 }) {
   const cameraRef = React.useRef<any>(null);
+  const cardRef = React.useRef<RNView>(null);
   const initialCenter = useCameraAdvance(items, cameraRef);
   const stopsWithCoords = items.filter(
     it => it.stop.latitude != null && it.stop.longitude != null,
   );
+  const {
+    showModal,
+    openMap,
+    closeMap,
+    expandedViewStyle,
+    backdropStyle,
+  } = useDetachedMapExpand(cardRef, 200);
 
   if (stopsWithCoords.length < 2)
     return null;
@@ -459,65 +575,35 @@ function RouteMapCard({
         transition={{ type: 'timing', duration: motionTokens.duration.base, delay: 180 }}
         style={{ borderRadius: 16, overflow: 'hidden' }}
       >
-        <MLMap
-          style={mapStyles.map}
-          mapStyle={MAP_STYLE_URL}
-          logo={false}
-          attribution={false}
-          dragPan={false}
-          touchZoom={false}
-          doubleTapZoom={false}
-        >
-          <MLCamera
-            ref={cameraRef}
-            center={initialCenter}
-            zoom={12}
-          />
-          <GeoJSONSource id="route-line-source" data={lineGeoJson}>
-            <Layer
-              id="route-line"
-              type="line"
-              paint={{ 'line-color': '#3b82f6', 'line-width': 2, 'line-dasharray': [4, 2] }}
+        <TouchableOpacity activeOpacity={0.9} onPress={openMap}>
+          <RNView ref={cardRef} style={{ borderRadius: 16, overflow: 'hidden' }}>
+            <RouteMapContent
+              cameraRef={cameraRef}
+              initialCenter={initialCenter}
+              lineGeoJson={lineGeoJson}
+              stopsWithCoords={stopsWithCoords}
+              nearbyStopId={nearbyStopId}
+              driverCoord={driverCoord}
+              fullscreen={false}
             />
-          </GeoJSONSource>
-          {stopsWithCoords.map((it, i) => {
-            const { stop, done, skipped } = it;
-            const isNearby = stop.id === nearbyStopId;
-            const bg = done ? '#16a34a' : skipped ? '#a3a3a3' : isNearby ? '#f59e0b' : '#3b82f6';
-            const label = done ? '✓' : skipped ? '×' : String(i + 1);
-            return (
-              <Marker key={stop.id} id={`stop-${i}`} lngLat={[stop.longitude!, stop.latitude!]}>
-                <View style={[mapStyles.markerDot, { backgroundColor: bg }]}>
-                  {isNearby && (
-                    <MotiView
-                      from={{ scale: 1, opacity: 0.6 }}
-                      animate={{ scale: 2, opacity: 0 }}
-                      transition={{ type: 'timing', duration: 1100, loop: true }}
-                      style={[StyleSheet.absoluteFillObject, { borderRadius: 11, backgroundColor: '#f59e0b' }]}
-                    />
-                  )}
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{label}</Text>
-                </View>
-              </Marker>
-            );
-          })}
-          {driverCoord != null
-            ? (
-                <Marker id="driver-pos" lngLat={driverCoord}>
-                  <View style={{ width: 16, height: 16 }}>
-                    <MotiView
-                      from={{ scale: 1, opacity: 0.5 }}
-                      animate={{ scale: 1.8, opacity: 0 }}
-                      transition={{ type: 'timing', duration: 1100, loop: true }}
-                      style={[mapStyles.driverDot, { position: 'absolute' }]}
-                    />
-                    <View style={mapStyles.driverDot} />
-                  </View>
-                </Marker>
-              )
-            : null}
-        </MLMap>
+          </RNView>
+        </TouchableOpacity>
       </MotiView>
+      <DetachedMapModal
+        visible={showModal}
+        closeMap={closeMap}
+        expandedViewStyle={expandedViewStyle}
+        backdropStyle={backdropStyle}
+      >
+        <RouteMapContent
+          initialCenter={initialCenter}
+          lineGeoJson={lineGeoJson}
+          stopsWithCoords={stopsWithCoords}
+          nearbyStopId={nearbyStopId}
+          driverCoord={driverCoord}
+          fullscreen
+        />
+      </DetachedMapModal>
     </>
   );
 }
@@ -752,7 +838,6 @@ function RouteStopsCard({
 }
 
 function useShiftMutations(campaign: Awaited<ReturnType<typeof fetchDriverCampaign>>) {
-  const signOut = useAuthStore.use.signOut();
   const queryClient = useQueryClient();
   const profileId = useAuthStore.use.profile()?.id;
 
@@ -777,7 +862,6 @@ function useShiftMutations(campaign: Awaited<ReturnType<typeof fetchDriverCampai
       await stopShiftTracking();
       queryClient.invalidateQueries({ queryKey: ['driver-campaign'] });
       showMessage({ message: 'Shift ended. Good work!', type: 'success' });
-      await signOut();
     },
     onError: async (err: Error) => {
       // Server failed to record shift end — still stop local tracking/MMKV so we
@@ -915,6 +999,8 @@ type ActiveCampaignProps = {
   onMove: (idx: number, dir: 'up' | 'down') => void;
   nearbyStopId: string | null;
   dismissNudge: (stopId: string) => void;
+  showBackgroundLocationBanner: boolean;
+  onOpenLocationSettings: () => void;
 };
 
 function ActiveCampaignView({
@@ -935,37 +1021,34 @@ function ActiveCampaignView({
   onMove,
   nearbyStopId,
   dismissNudge,
+  showBackgroundLocationBanner,
+  onOpenLocationSettings,
 }: ActiveCampaignProps) {
   const router = useRouter();
   const nearbyIdx = nearbyStopId != null ? items.findIndex(it => it.stop.id === nearbyStopId) : -1;
+  const statusChip = (
+    <MotiView
+      from={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={motionTokens.spring.lively}
+    >
+      <StatusBadge status={activeShift ? 'active' : campaign.status} />
+    </MotiView>
+  );
+
   return (
     <View testID="driver-campaign-screen" className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <CampaignHeader
-        right={(
-          <View className="flex-row items-center gap-2">
-            <MotiView
-              from={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={motionTokens.spring.lively}
-            >
-              <StatusBadge status={activeShift ? 'active' : campaign.status} />
-            </MotiView>
-            <ThemeToggle />
-            <TouchableOpacity
-              onPress={signOut}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-            >
-              <LogOut color="#737373" width={18} height={18} />
-            </TouchableOpacity>
-          </View>
-        )}
+        right={<CampaignHeaderActions status={statusChip} onAnalytics={() => router.push('/(app)/driver-analytics')} onSignOut={signOut} />}
       />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, gap: 16 }}
         contentInsetAdjustmentBehavior="automatic"
       >
+        {showBackgroundLocationBanner && (
+          <BackgroundLocationBanner onOpenSettings={onOpenLocationSettings} />
+        )}
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -1039,11 +1122,17 @@ function useDevRouteSimulation(
   }, [activeShiftId, setDriverCoord, simulationPoints]);
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function CampaignScreen() {
   const profile = useAuthStore.use.profile();
   const signOut = useAuthStore.use.signOut();
+  const router = useRouter();
   const [showSplash, setShowSplash] = React.useState(true);
   const handleSplashDone = React.useCallback(() => setShowSplash(false), []);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [burstVisible, setBurstVisible] = React.useState(false);
+  const pendingNavRef = React.useRef<null | (() => void)>(null);
+  const burstCompletedRef = React.useRef(false);
   const [driverCoord, setDriverCoord] = React.useState<[number, number] | null>(null);
   const { data: campaign, isLoading, error } = useQuery({
     queryKey: ['driver-campaign', profile?.id],
@@ -1058,6 +1147,18 @@ export function CampaignScreen() {
   const { nearbyStopId, dismissNudge } = useProximityNudge(driverCoord, items);
   useDevRouteSimulation(campaign ?? null, activeShiftId, setDriverCoord);
   useDriverPositionPublisher(activeShiftId, driverCoord);
+  const {
+    osStatus: bgLocationOsStatus,
+    decision: bgLocationDecision,
+    requestWithDisclosure: requestBgLocationWithDisclosure,
+    openSettings: openBgLocationSettings,
+  } = useBackgroundLocationPermission();
+  const requestBgLocationRef = React.useRef(requestBgLocationWithDisclosure);
+  requestBgLocationRef.current = requestBgLocationWithDisclosure;
+  const showBgLocationBanner
+    = !!activeShiftId
+      && (bgLocationOsStatus === 'denied'
+        || (bgLocationOsStatus === 'undetermined' && bgLocationDecision === 'declined'));
   React.useEffect(() => {
     if (!activeShiftId) {
       clearTrackingBlock();
@@ -1090,11 +1191,10 @@ export function CampaignScreen() {
           pos => setDriverCoord([pos.coords.longitude, pos.coords.latitude]),
         );
 
-        // Request background permission (Android 10+ requires a separate prompt
-        // after foreground is granted; iOS handles it via NSLocationAlwaysAndWhenInUse)
-        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+        // Prominent Disclosure (Play policy) gates the OS background prompt.
+        // Hook respects a prior Decline — no re-prompt, no loop. Foreground still runs.
+        const bgStatus = await requestBgLocationRef.current();
         if (bgStatus !== 'granted') {
-          // Foreground tracking still works — background broadcast won't fire
           return;
         }
 
@@ -1116,36 +1216,102 @@ export function CampaignScreen() {
       sub?.remove();
     };
   }, [activeShiftId]);
+  const handleStartShift = React.useCallback(() => {
+    burstCompletedRef.current = false;
+    pendingNavRef.current = null;
+    setBurstVisible(true);
+    startMutation.mutate(undefined, {
+      onSuccess: () => {
+        const navigateToUpload = () => router.push('/(app)/upload');
+        if (burstCompletedRef.current) {
+          setBurstVisible(false);
+          navigateToUpload();
+          return;
+        }
+        pendingNavRef.current = navigateToUpload;
+      },
+      onError: () => {
+        setBurstVisible(false);
+        burstCompletedRef.current = false;
+        pendingNavRef.current = null;
+      },
+    });
+  }, [router, startMutation]);
+
+  const handleShiftStartBurstComplete = React.useCallback(() => {
+    burstCompletedRef.current = true;
+    setBurstVisible(false);
+    const pendingNav = pendingNavRef.current;
+    pendingNavRef.current = null;
+    pendingNav?.();
+  }, []);
+  const requestSignOutConfirm = React.useCallback(() => {
+    setConfirmOpen(true);
+  }, []);
+
   const recentPhotos = getRecentPhotos(campaign);
+
+  const logoutDialog = (
+    <LogoutConfirmDialog
+      visible={confirmOpen}
+      onCancel={() => setConfirmOpen(false)}
+      onConfirm={() => {
+        setConfirmOpen(false);
+        void signOut();
+      }}
+    />
+  );
+
   if (isLoading) {
-    return <View className="flex-1 items-center justify-center bg-white dark:bg-black"><SpinnerAnimation size={64} /></View>;
+    return (
+      <>
+        <View className="flex-1 items-center justify-center bg-white dark:bg-black"><SpinnerAnimation size={64} /></View>
+        {logoutDialog}
+      </>
+    );
   }
   if (error || !campaign) {
-    return <EmptyCampaignState onSignOut={signOut} />;
+    return (
+      <>
+        <EmptyCampaignState onSignOut={requestSignOutConfirm} />
+        {logoutDialog}
+      </>
+    );
   }
   if (showSplash) {
-    return <DriverLaunchSplash onDone={handleSplashDone} />;
+    return (
+      <>
+        <DriverLaunchSplash onDone={handleSplashDone} />
+        {logoutDialog}
+      </>
+    );
   }
 
   return (
-    <ActiveCampaignView
-      campaign={campaign}
-      activeShift={activeShift}
-      driverCoord={driverCoord}
-      signOut={signOut}
-      onStartShift={() => startMutation.mutate()}
-      isStartPending={startMutation.isPending}
-      onEndShift={() => endMutation.mutate()}
-      isEndPending={endMutation.isPending}
-      recentPhotos={recentPhotos}
-      profileId={profile?.id}
-      items={items}
-      canModify={campaign.driver_can_modify_route}
-      onDone={markDone}
-      onSkip={markSkip}
-      onMove={moveStop}
-      nearbyStopId={nearbyStopId}
-      dismissNudge={dismissNudge}
-    />
+    <>
+      <ActiveCampaignView
+        campaign={campaign}
+        activeShift={activeShift}
+        driverCoord={driverCoord}
+        signOut={requestSignOutConfirm}
+        onStartShift={handleStartShift}
+        isStartPending={startMutation.isPending}
+        onEndShift={() => endMutation.mutate()}
+        isEndPending={endMutation.isPending}
+        recentPhotos={recentPhotos}
+        profileId={profile?.id}
+        items={items}
+        canModify={campaign.driver_can_modify_route}
+        onDone={markDone}
+        onSkip={markSkip}
+        onMove={moveStop}
+        nearbyStopId={nearbyStopId}
+        dismissNudge={dismissNudge}
+        showBackgroundLocationBanner={showBgLocationBanner}
+        onOpenLocationSettings={openBgLocationSettings}
+      />
+      <ShiftStartBurst visible={burstVisible} onComplete={handleShiftStartBurstComplete} />
+      {logoutDialog}
+    </>
   );
 }

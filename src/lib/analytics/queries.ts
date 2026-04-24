@@ -12,6 +12,7 @@ import { format, subDays, subMonths, subWeeks, subYears } from 'date-fns';
  * Analytics Supabase queries for mobile.
  * Mirrors web analytics query layer — same DB, same calculations.
  */
+import { deriveCampaignStatus } from '@/lib/campaign-lifecycle';
 import { supabase } from '@/lib/supabase';
 import { grossProfit, marginPct, num, workedHours } from './calculations';
 
@@ -20,6 +21,8 @@ const TOP_N = 5; // fewer on mobile
 
 type RawCampaignRow = {
   id: string;
+  title: string;
+  campaign_date: string;
   status: string;
   client_billed_amount: number | null;
   client_id: string;
@@ -27,7 +30,13 @@ type RawCampaignRow = {
   clients: { id: string; name: string } | null;
   driver_profile: { id: string; display_name: string } | null;
   campaign_costs: { amount: number; cost_types: { name: string } | null }[];
-  driver_shifts: { started_at: string; ended_at: string | null; shift_status: string }[];
+  driver_shifts: {
+    started_at: string;
+    ended_at: string | null;
+    shift_status: string;
+    driver_profile_id: string | null;
+    driver_profile: { display_name: string } | null;
+  }[];
 };
 
 function getDateRange(range: AnalyticsRange): { from: string; to: string } {
@@ -66,8 +75,15 @@ function filtersKey(filters: AnalyticsFilters): string {
     range: filters.range,
     clientId: filters.clientId ?? null,
     driverId: filters.driverId ?? null,
+    campaignId: filters.campaignId ?? null,
     status: filters.status ?? null,
   });
+}
+
+function campaignMatchesDriver(row: RawCampaignRow, driverId: string): boolean {
+  if (row.driver_profile_id === driverId)
+    return true;
+  return (row.driver_shifts ?? []).some(shift => shift.driver_profile_id === driverId);
 }
 
 function getCampaigns(filters: AnalyticsFilters): Promise<RawCampaignRow[]> {
@@ -86,23 +102,24 @@ async function fetchCampaignsRaw(filters: AnalyticsFilters): Promise<RawCampaign
   let query = supabase
     .from('campaigns')
     .select(`
-      id, status, client_billed_amount,
+      id, title, status, client_billed_amount,
+      campaign_date,
       client_id, driver_profile_id,
       clients ( id, name ),
       driver_profile:profiles!driver_profile_id ( id, display_name ),
       campaign_costs ( amount, cost_types ( name ) ),
-      driver_shifts ( started_at, ended_at, shift_status )
+      driver_shifts (
+        started_at, ended_at, shift_status, driver_profile_id,
+        driver_profile:profiles!driver_profile_id ( display_name )
+      )
     `)
     .gte('campaign_date', from)
     .lte('campaign_date', to);
 
   if (filters.clientId)
     query = query.eq('client_id', filters.clientId);
-  if (filters.driverId)
-    query = query.eq('driver_profile_id', filters.driverId);
-  if (filters.status)
-    query = query.eq('status', filters.status);
-
+  if (filters.campaignId)
+    query = query.eq('id', filters.campaignId);
   const { data, error } = await query.order('campaign_date', { ascending: false });
 
   if (error)
@@ -111,8 +128,10 @@ async function fetchCampaignsRaw(filters: AnalyticsFilters): Promise<RawCampaign
   const normalize = (val: unknown) =>
     Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
 
-  return (data ?? []).map((row: Record<string, unknown>) => ({
+  const rows = (data ?? []).map((row: Record<string, unknown>) => ({
     id: row.id,
+    title: row.title,
+    campaign_date: row.campaign_date,
     status: row.status,
     client_billed_amount: row.client_billed_amount,
     client_id: row.client_id,
@@ -123,8 +142,30 @@ async function fetchCampaignsRaw(filters: AnalyticsFilters): Promise<RawCampaign
       amount: c.amount,
       cost_types: normalize(c.cost_types),
     })),
-    driver_shifts: (row.driver_shifts ?? []),
+    driver_shifts: ((row.driver_shifts ?? []) as Array<Record<string, unknown>>).map(shift => ({
+      started_at: shift.started_at as string,
+      ended_at: (shift.ended_at as string | null) ?? null,
+      shift_status: shift.shift_status as string,
+      driver_profile_id: (shift.driver_profile_id as string | null) ?? null,
+      driver_profile: normalize(shift.driver_profile) as { display_name: string } | null,
+    })),
   })) as RawCampaignRow[];
+
+  const driverFilteredRows = filters.driverId
+    ? rows.filter(row => campaignMatchesDriver(row, filters.driverId!))
+    : rows;
+
+  if (filters.status) {
+    return driverFilteredRows.filter(row =>
+      deriveCampaignStatus({
+        campaignDate: row.campaign_date,
+        rawStatus: row.status,
+        shifts: row.driver_shifts,
+      }) === filters.status,
+    );
+  }
+
+  return driverFilteredRows;
 }
 
 export async function getSummary(filters: AnalyticsFilters): Promise<AnalyticsSummary> {
@@ -154,8 +195,13 @@ export async function getSummary(filters: AnalyticsFilters): Promise<AnalyticsSu
       }
     }
 
-    if (row.status === 'active')
+    if (deriveCampaignStatus({
+      campaignDate: row.campaign_date,
+      rawStatus: row.status,
+      shifts: row.driver_shifts,
+    }) === 'active') {
       activeCampaigns++;
+    }
   }
 
   const profit = grossProfit(revenue, driverCost, internalCost);
@@ -204,29 +250,47 @@ export async function getDriverBreakdown(filters: AnalyticsFilters): Promise<Dri
   const map = new Map<string, { driverName: string; hours: number; payout: number; campaignCount: number }>();
 
   for (const row of rows) {
-    const driverId = row.driver_profile_id;
-    if (!driverId)
-      continue;
-
-    const driverName = row.driver_profile?.display_name ?? 'Unknown';
-
-    let acc = map.get(driverId);
-    if (!acc) {
-      acc = { driverName, hours: 0, payout: 0, campaignCount: 0 };
-      map.set(driverId, acc);
-    }
-
-    acc.campaignCount++;
-
-    for (const cc of row.campaign_costs ?? []) {
-      if (cc.cost_types?.name === DRIVER_WAGE_COST_TYPE) {
-        acc.payout += num(cc.amount);
-      }
-    }
-
+    const participatingDriverIds = new Set<string>();
     for (const shift of row.driver_shifts ?? []) {
-      if (shift.shift_status === 'completed' && shift.ended_at) {
-        acc.hours += workedHours(shift.started_at, shift.ended_at);
+      if (shift.driver_profile_id)
+        participatingDriverIds.add(shift.driver_profile_id);
+    }
+    if (participatingDriverIds.size === 0 && row.driver_profile_id) {
+      participatingDriverIds.add(row.driver_profile_id);
+    }
+    if (participatingDriverIds.size === 0)
+      continue;
+    for (const driverId of participatingDriverIds) {
+      let driverName = row.driver_profile_id === driverId
+        ? row.driver_profile?.display_name
+        : undefined;
+      if (!driverName) {
+        const shift = row.driver_shifts.find(s => s.driver_profile_id === driverId && s.driver_profile?.display_name);
+        driverName = shift?.driver_profile?.display_name;
+      }
+      let acc = map.get(driverId);
+      if (!acc) {
+        acc = { driverName: driverName ?? 'Unknown', hours: 0, payout: 0, campaignCount: 0 };
+        map.set(driverId, acc);
+      }
+
+      acc.campaignCount++;
+
+      // Campaign-level wage costs are attributed to the campaign's assigned driver.
+      if (row.driver_profile_id === driverId) {
+        for (const cc of row.campaign_costs ?? []) {
+          if (cc.cost_types?.name === DRIVER_WAGE_COST_TYPE) {
+            acc.payout += num(cc.amount);
+          }
+        }
+      }
+
+      for (const shift of row.driver_shifts ?? []) {
+        if (shift.driver_profile_id !== driverId)
+          continue;
+        if (shift.shift_status === 'completed' && shift.ended_at) {
+          acc.hours += workedHours(shift.started_at, shift.ended_at);
+        }
       }
     }
   }

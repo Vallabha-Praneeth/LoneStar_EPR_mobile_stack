@@ -18,8 +18,9 @@ import {
 } from '@/components/motion';
 import { StatusBadge } from '@/components/status-badge';
 import { Text, View } from '@/components/ui';
-import { Camera, Clock, LogOut } from '@/components/ui/icons';
+import { BarChart, Camera, Clock, LogOut } from '@/components/ui/icons';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchClientCampaigns } from '@/lib/api/client/campaigns';
 import { motionTokens } from '@/lib/motion/tokens';
@@ -229,6 +230,7 @@ export function ClientLandingScreen() {
   const router = useRouter();
   const profile = useAuthStore.use.profile();
   const signOut = useAuthStore.use.signOut();
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   const { data: campaigns, isLoading, isError } = useQuery<ClientCampaignRow[]>({
     queryKey: ['client-campaigns', profile?.client_id],
@@ -251,6 +253,14 @@ export function ClientLandingScreen() {
         <View className="flex-row items-center gap-1">
           <ThemeToggle />
           <TouchableOpacity
+            onPress={() => router.push('/(app)/client/analytics')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
+            accessibilityLabel="Analytics"
+          >
+            <BarChart color="#737373" width={18} height={18} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => router.push('/(app)/client/timing')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
@@ -259,7 +269,7 @@ export function ClientLandingScreen() {
             <Clock color="#737373" width={18} height={18} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={signOut}
+            onPress={() => setConfirmOpen(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
           >
@@ -283,6 +293,14 @@ export function ClientLandingScreen() {
       {!isLoading && !isError && (
         <CampaignListBody campaigns={campaigns} name={name} bottomInset={insets.bottom} />
       )}
+      <LogoutConfirmDialog
+        visible={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          signOut();
+        }}
+      />
     </View>
   );
 }

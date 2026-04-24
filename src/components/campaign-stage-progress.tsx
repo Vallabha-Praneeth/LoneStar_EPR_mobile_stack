@@ -2,13 +2,14 @@ import * as React from 'react';
 
 import { Text, View } from '@/components/ui';
 
-type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed';
+type CampaignStatus = 'draft' | 'pending' | 'active' | 'completed' | 'overdue';
 
 const STAGES: { key: CampaignStatus; label: string }[] = [
   { key: 'draft', label: 'Draft' },
   { key: 'pending', label: 'Pending' },
   { key: 'active', label: 'Active' },
   { key: 'completed', label: 'Done' },
+  { key: 'overdue', label: 'Overdue' },
 ];
 
 type Props = {

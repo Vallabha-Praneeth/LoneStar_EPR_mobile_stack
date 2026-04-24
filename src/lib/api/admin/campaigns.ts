@@ -1,10 +1,12 @@
+import type { CampaignLifecycleStatus } from '@/lib/campaign-lifecycle';
+import { deriveCampaignStatus } from '@/lib/campaign-lifecycle';
 import { supabase } from '@/lib/supabase';
 
 export type CampaignRow = {
   id: string;
   title: string;
   campaign_date: string;
-  status: 'draft' | 'pending' | 'active' | 'completed';
+  status: CampaignLifecycleStatus;
   clients: { name: string } | null;
   driver_profile: { display_name: string } | null;
   campaign_photos: { id: string }[];
@@ -15,7 +17,7 @@ export type CampaignDetail = {
   id: string;
   title: string;
   campaign_date: string;
-  status: 'draft' | 'pending' | 'active' | 'completed';
+  status: CampaignLifecycleStatus;
   route_id: string | null;
   routes: { name: string } | null;
   internal_notes: string | null;
@@ -50,7 +52,8 @@ export async function fetchCampaigns(): Promise<CampaignRow[]> {
       clients ( name ),
       driver_profile:profiles!driver_profile_id ( display_name ),
       campaign_photos ( id ),
-      campaign_costs ( amount )
+      campaign_costs ( amount ),
+      driver_shifts ( started_at, ended_at )
     `)
     .order('campaign_date', { ascending: false });
 
@@ -64,7 +67,11 @@ export async function fetchCampaigns(): Promise<CampaignRow[]> {
     id: row.id,
     title: row.title,
     campaign_date: row.campaign_date,
-    status: row.status,
+    status: deriveCampaignStatus({
+      campaignDate: row.campaign_date as string,
+      rawStatus: row.status as string,
+      shifts: (row.driver_shifts ?? []) as Array<{ started_at?: string | null; ended_at?: string | null }>,
+    }),
     clients: normalize(row.clients),
     driver_profile: normalize(row.driver_profile),
     campaign_photos: (row.campaign_photos ?? []),
@@ -104,7 +111,11 @@ export async function fetchCampaignDetail(id: string): Promise<CampaignDetail> {
     id: raw.id,
     title: raw.title,
     campaign_date: raw.campaign_date,
-    status: raw.status,
+    status: deriveCampaignStatus({
+      campaignDate: raw.campaign_date as string,
+      rawStatus: raw.status as string,
+      shifts: (raw.driver_shifts ?? []) as Array<{ started_at?: string | null; ended_at?: string | null }>,
+    }),
     route_id: raw.route_id,
     internal_notes: raw.internal_notes,
     client_billed_amount: raw.client_billed_amount,

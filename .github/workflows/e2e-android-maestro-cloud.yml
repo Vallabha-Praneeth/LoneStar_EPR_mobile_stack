@@ -102,6 +102,6 @@ jobs:
           workspace: .maestro
           include-tags: smoke
           env: |
-            APP_ID=com.adtruck_driver_native.preview
+            APP_ID=com.quantumops.lonestarerp.driver.preview
             USERNAME=driver-e2e
             PASSWORD=${{ secrets.E2E_DRIVER_PASSWORD }}

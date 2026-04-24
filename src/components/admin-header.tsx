@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import * as React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text, View } from '@/components/ui';
-import { ChevronLeft } from '@/components/ui/icons';
+import { BrandLogo, RiveBackButton, Text, View } from '@/components/ui';
+import { uiPolishClasses } from '@/components/ui/polish-system';
 
 type AdminHeaderProps = {
   title: string;
@@ -13,20 +13,18 @@ type AdminHeaderProps = {
 
 export function AdminHeader({ title, showBack = true, right }: AdminHeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800">
+    <View className={`${uiPolishClasses.headerShell} flex-row items-center justify-between`} style={{ paddingTop: insets.top + 8 }}>
       <View className="flex-1 flex-row items-center gap-2">
         {showBack && (
-          <TouchableOpacity
+          <RiveBackButton
             testID="back-button"
             onPress={() => router.back()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="size-8 items-center justify-center rounded-lg active:bg-neutral-100 dark:active:bg-neutral-700"
-          >
-            <ChevronLeft color="#737373" width={20} height={20} />
-          </TouchableOpacity>
+          />
         )}
+        <BrandLogo />
         <Text className="flex-1 text-base font-semibold" numberOfLines={1}>{title}</Text>
       </View>
       {right}

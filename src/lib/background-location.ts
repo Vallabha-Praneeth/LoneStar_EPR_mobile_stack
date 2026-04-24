@@ -1,5 +1,5 @@
 /**
- * Background location task for AdTruck driver shifts.
+ * Background location task for LoneStar Fleet driver shifts.
  *
  * IMPORTANT: This file must be imported at the app entry-point top level
  * (src/app/_layout.tsx) so TaskManager.defineTask executes before the OS
@@ -28,7 +28,7 @@ import { driverPositionChannelName } from '@/lib/realtime/driver-location';
 import { storage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
-export const BACKGROUND_LOCATION_TASK = 'ADTRUCK_BACKGROUND_LOCATION';
+export const BACKGROUND_LOCATION_TASK = 'LONESTAR_FLEET_BACKGROUND_LOCATION';
 export const MMKV_SHIFT_ID_KEY = 'active_shift_id';
 export const MMKV_LAST_COORD_KEY = 'driver_last_coord';
 
@@ -136,7 +136,7 @@ export async function startShiftTracking(shiftId: string): Promise<void> {
     showsBackgroundLocationIndicator: true, // iOS: blue pill in status bar
     foregroundService: {
       // Android: keeps the task alive as a foreground service
-      notificationTitle: 'AdTruck shift in progress',
+      notificationTitle: 'LoneStar Fleet shift in progress',
       notificationBody: 'Location is being tracked during your shift.',
       notificationColor: '#1d4ed8',
     },

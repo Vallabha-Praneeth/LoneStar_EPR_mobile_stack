@@ -3,6 +3,7 @@ import Svg from 'react-native-svg';
 import { withUniwind } from 'uniwind';
 
 export * from './badge';
+export * from './brand-logo';
 export * from './button';
 export * from './card';
 export * from './checkbox';
@@ -13,7 +14,10 @@ export * from './image';
 export * from './input';
 export * from './list';
 export * from './modal';
+export * from './offline-overlay';
 export * from './progress-bar';
+export * from './revenue-coin';
+export * from './rive-back-button';
 export * from './select';
 export * from './text';
 export * from './utils';

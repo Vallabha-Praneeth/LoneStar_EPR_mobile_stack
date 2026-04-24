@@ -62,7 +62,7 @@ export function LoginForm({ onSubmit = () => {}, error }: LoginFormProps) {
             transition={{ type: 'timing', duration: motionTokens.duration.base, delay: motionTokens.duration.fast }}
           >
             <Text testID="form-title" className="mt-4 pb-1 text-center text-3xl font-bold tracking-tight">
-              AdTruck
+              LoneStar Fleet
             </Text>
             <Text className="text-center text-sm text-neutral-500">
               Sign in to continue

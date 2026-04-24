@@ -9,58 +9,33 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Modal,
   View as RNView,
   StyleSheet,
   TouchableOpacity,
-  useWindowDimensions,
 } from 'react-native';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminHeader } from '@/components/admin-header';
 import { AdminSettingsGearButton } from '@/components/admin-settings-gear';
 import { CampaignStageProgress } from '@/components/campaign-stage-progress';
+import { DetachedMapModal } from '@/components/detached-map-modal';
 import { DriverTransitBadge } from '@/components/driver-transit-badge';
 import { InfoCard } from '@/components/info-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, Text, View } from '@/components/ui';
 import { DollarSign, MapPin, Truck, User } from '@/components/ui/icons';
+import { useDetachedMapExpand } from '@/components/use-detached-map-expand';
 import { fetchCampaignDetail } from '@/lib/api/admin/campaigns';
 import { getSignedUrl } from '@/lib/api/admin/photos';
 import { fetchRouteById } from '@/lib/api/admin/routes';
-import { motionTokens } from '@/lib/motion/tokens';
 import { useDriverPositionSubscriberSnapshot } from '@/lib/realtime/driver-location';
 import { useSmoothedLiveCoord } from '@/lib/realtime/live-map-motion';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
-const SPRING = motionTokens.spring.lively;
 
 const liveMapStyles = StyleSheet.create({
   cardMap: { flex: 1, borderRadius: 12, overflow: 'hidden' },
   fullMap: { flex: 1 },
   dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#3b82f6', borderWidth: 2, borderColor: '#fff' },
   stopDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#f59e0b', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-});
-
-const expandStyles = StyleSheet.create({
-  modalRoot: { flex: 1 },
-  mapLayer: { zIndex: 0, flex: 1 },
-  closeOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-    elevation: 10,
-    pointerEvents: 'box-none',
-  },
 });
 
 type MapContentProps = {
@@ -135,71 +110,11 @@ function useRouteStops(routeId: string | null) {
   return { stopsWithCoords, lineGeoJson };
 }
 
-function useMapExpand(cardRef: React.RefObject<RNView | null>) {
-  const { width: SW, height: SH } = useWindowDimensions();
-  const [showModal, setShowModal] = React.useState(false);
-  const aLeft = useSharedValue(0);
-  const aTop = useSharedValue(0);
-  const aW = useSharedValue(SW);
-  const aH = useSharedValue(200);
-  const aRadius = useSharedValue(12);
-  const aBackdrop = useSharedValue(0);
-
-  const expandedViewStyle = useAnimatedStyle(() => ({
-    position: 'absolute',
-    left: aLeft.value,
-    top: aTop.value,
-    width: aW.value,
-    height: aH.value,
-    borderRadius: aRadius.value,
-    overflow: 'hidden',
-  }));
-  const backdropStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: `rgba(0,0,0,${aBackdrop.value})`,
-  }));
-
-  const openMap = React.useCallback(() => {
-    // eslint-disable-next-line max-params
-    cardRef.current?.measureInWindow((x, y, w, h) => {
-      // Snap to card rect first (zero-duration) so Reanimated captures the start frame
-      aLeft.value = withTiming(x, { duration: 0 });
-      aTop.value = withTiming(y, { duration: 0 });
-      aW.value = withTiming(w, { duration: 0 });
-      aH.value = withTiming(h, { duration: 0 });
-      aRadius.value = withTiming(12, { duration: 0 });
-      aBackdrop.value = withTiming(0, { duration: 0 });
-      setShowModal(true);
-      aLeft.value = withSpring(0, SPRING);
-      aTop.value = withSpring(0, SPRING);
-      aW.value = withSpring(SW, SPRING);
-      aH.value = withSpring(SH, SPRING);
-      aRadius.value = withTiming(0, { duration: 300 });
-      aBackdrop.value = withTiming(0.45, { duration: 300 });
-    });
-  }, [aLeft, aTop, aW, aH, aRadius, aBackdrop, cardRef, SW, SH]);
-
-  const closeMap = React.useCallback(() => {
-    // eslint-disable-next-line max-params
-    cardRef.current?.measureInWindow((x, y, w, h) => {
-      aLeft.value = withSpring(x, SPRING);
-      aTop.value = withSpring(y, SPRING);
-      aW.value = withSpring(w, SPRING);
-      aH.value = withSpring(h, SPRING, () => runOnJS(setShowModal)(false));
-      aRadius.value = withTiming(12, { duration: 300 });
-      aBackdrop.value = withTiming(0, { duration: 300 });
-    });
-  }, [aLeft, aTop, aW, aH, aRadius, aBackdrop, cardRef]);
-
-  return { showModal, openMap, closeMap, expandedViewStyle, backdropStyle };
-}
-
 type LiveDriverCardProps = { shiftId: string; routeId: string | null };
 
 function LiveDriverCard({ shiftId, routeId }: LiveDriverCardProps) {
   const snapshot = useDriverPositionSubscriberSnapshot(shiftId);
   const coord = useSmoothedLiveCoord(snapshot);
-  const insets = useSafeAreaInsets();
   const [now, setNow] = React.useState(Date.now);
   React.useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 15_000);
@@ -208,7 +123,7 @@ function LiveDriverCard({ shiftId, routeId }: LiveDriverCardProps) {
   const isStale = snapshot != null && now - snapshot.ts > 60_000;
   const { stopsWithCoords, lineGeoJson } = useRouteStops(routeId);
   const cardRef = React.useRef<RNView>(null);
-  const { showModal, openMap, closeMap, expandedViewStyle, backdropStyle } = useMapExpand(cardRef);
+  const { showModal, openMap, closeMap, expandedViewStyle, backdropStyle } = useDetachedMapExpand(cardRef, 200);
 
   return (
     <View className="gap-2">
@@ -239,49 +154,20 @@ function LiveDriverCard({ shiftId, routeId }: LiveDriverCardProps) {
         </Text>
       )}
 
-      <Modal
+      <DetachedMapModal
         visible={showModal}
-        transparent
-        statusBarTranslucent
-        presentationStyle="overFullScreen"
-        animationType="none"
-        onRequestClose={closeMap}
+        closeMap={closeMap}
+        expandedViewStyle={expandedViewStyle}
+        backdropStyle={backdropStyle}
       >
-        <Animated.View style={[expandStyles.modalRoot, backdropStyle]} pointerEvents="none" />
-        <Animated.View style={expandedViewStyle}>
-          <RNView style={expandStyles.mapLayer}>
-            <MapContent
-              coord={coord}
-              lineGeoJson={lineGeoJson}
-              stopsWithCoords={stopsWithCoords}
-              mapId="full"
-              fullscreen
-            />
-          </RNView>
-          <RNView style={expandStyles.closeOverlay} pointerEvents="box-none">
-            <TouchableOpacity
-              onPress={closeMap}
-              style={{
-                position: 'absolute',
-                top: insets.top + 12,
-                right: 16,
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: 'rgba(0,0,0,0.55)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 20,
-                elevation: 20,
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Minimize map"
-            >
-              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', lineHeight: 20 }}>✕</Text>
-            </TouchableOpacity>
-          </RNView>
-        </Animated.View>
-      </Modal>
+        <MapContent
+          coord={coord}
+          lineGeoJson={lineGeoJson}
+          stopsWithCoords={stopsWithCoords}
+          mapId="full"
+          fullscreen
+        />
+      </DetachedMapModal>
     </View>
   );
 }

@@ -4,6 +4,7 @@ import { GeoJSONSource, Layer, Marker, Camera as MLCamera, Map as MLMap } from '
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { MotiView } from 'moti';
 
 import * as React from 'react';
 import {
@@ -12,12 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { AdminHeader } from '@/components/admin-header';
-import { RiveButton } from '@/components/motion';
 import { Switch, Text, View } from '@/components/ui';
 import { Plus } from '@/components/ui/icons';
 import { deleteRoute, fetchRouteById, upsertRoute } from '@/lib/api/admin/routes';
@@ -384,6 +385,103 @@ function DeleteRouteButton({ routeId, routeName }: { routeId: string; routeName:
   );
 }
 
+function CreateRouteMotionIcon({
+  onPress,
+  disabled,
+  isEdit,
+}: {
+  onPress: () => void;
+  disabled: boolean;
+  isEdit: boolean;
+}) {
+  const burstBubbles = [
+    { x: -44, y: -20, size: 10, delay: 0 },
+    { x: -28, y: -44, size: 8, delay: 40 },
+    { x: 0, y: -52, size: 11, delay: 70 },
+    { x: 30, y: -42, size: 9, delay: 95 },
+    { x: 46, y: -14, size: 12, delay: 120 },
+    { x: 42, y: 20, size: 10, delay: 145 },
+    { x: 16, y: 46, size: 9, delay: 170 },
+    { x: -18, y: 44, size: 11, delay: 190 },
+    { x: -40, y: 20, size: 8, delay: 210 },
+  ] as const;
+  const [burstTick, setBurstTick] = React.useState(0);
+
+  function handlePress() {
+    if (disabled)
+      return;
+    setBurstTick(prev => prev + 1);
+    onPress();
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      disabled={disabled}
+      activeOpacity={0.88}
+      accessibilityRole="button"
+      accessibilityLabel={isEdit ? 'Save route' : 'Create route'}
+      testID="save-route-button"
+      style={[styles.createTouchArea, disabled && styles.createTouchAreaDisabled]}
+    >
+      <MotiView
+        from={{ scale: 0.88, opacity: 0.28 }}
+        animate={{ scale: 1.16, opacity: 0.1 }}
+        transition={{ type: 'timing', duration: 1700, loop: true, repeatReverse: true }}
+        style={styles.pulseOuter}
+      />
+      <MotiView
+        from={{ scale: 0.96, opacity: 0.45 }}
+        animate={{ scale: 1.08, opacity: 0.16 }}
+        transition={{ type: 'timing', duration: 1200, loop: true, repeatReverse: true }}
+        style={styles.pulseInner}
+      />
+      <MotiView
+        from={{ rotate: '0deg' }}
+        animate={{ rotate: '360deg' }}
+        transition={{ type: 'timing', duration: 2600, loop: true }}
+        style={styles.sparkOrbit}
+      >
+        <View style={styles.sparkDot} />
+      </MotiView>
+      <MotiView
+        from={{ scale: 0.96 }}
+        animate={{ scale: 1.04 }}
+        transition={{ type: 'timing', duration: 900, loop: true, repeatReverse: true }}
+        style={styles.createCore}
+      >
+        <Plus color="#FFFFFF" width={34} height={34} />
+      </MotiView>
+      <MotiView
+        from={{ opacity: 0.88, translateY: 0 }}
+        animate={{ opacity: 1, translateY: -2 }}
+        transition={{ type: 'timing', duration: 850, loop: true, repeatReverse: true }}
+        style={styles.createBanner}
+      >
+        <Text className="text-xs font-bold tracking-wider text-white">
+          {isEdit ? 'SAVE' : 'CREATE'}
+        </Text>
+      </MotiView>
+      {burstTick > 0 && burstBubbles.map((bubble, idx) => (
+        <MotiView
+          key={`burst-${burstTick}-${idx}`}
+          from={{ opacity: 0.92, scale: 0.32, translateX: 0, translateY: 0 }}
+          animate={{ opacity: 0, scale: 1.1, translateX: bubble.x, translateY: bubble.y }}
+          transition={{ type: 'timing', duration: 520, delay: bubble.delay }}
+          style={[
+            styles.burstBubble,
+            {
+              width: bubble.size,
+              height: bubble.size,
+              borderRadius: bubble.size / 2,
+            },
+          ]}
+        />
+      ))}
+    </TouchableOpacity>
+  );
+}
+
 function RouteFormEditor({
   routeId,
   isEdit,
@@ -453,12 +551,10 @@ function RouteFormEditor({
         <RouteMapPreview stops={stops} />
 
         <View className="items-center py-2">
-          <RiveButton
+          <CreateRouteMotionIcon
             onPress={() => mutation.mutate()}
             disabled={mutation.isPending}
-            width={260}
-            height={64}
-            testID="save-route-button"
+            isEdit={isEdit}
           />
         </View>
         {isEdit && routeId && (
@@ -512,3 +608,86 @@ export function RouteFormScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  createTouchArea: {
+    width: 146,
+    height: 154,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createTouchAreaDisabled: {
+    opacity: 0.5,
+  },
+  pulseOuter: {
+    position: 'absolute',
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    borderWidth: 2,
+    borderColor: 'rgba(255,108,0,0.35)',
+    backgroundColor: 'rgba(255,108,0,0.08)',
+  },
+  pulseInner: {
+    position: 'absolute',
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,145,75,0.45)',
+    backgroundColor: 'rgba(255,145,75,0.1)',
+  },
+  sparkOrbit: {
+    position: 'absolute',
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  sparkDot: {
+    marginTop: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FF8A3D',
+    shadowColor: '#FF6C00',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 4,
+  },
+  createCore: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6C00',
+    borderWidth: 2,
+    borderColor: '#FFD0A8',
+    shadowColor: '#FF6C00',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 9,
+  },
+  createBanner: {
+    position: 'absolute',
+    bottom: 1,
+    minWidth: 80,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#FF6C00',
+    borderWidth: 1,
+    borderColor: '#FFD0A8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  burstBubble: {
+    position: 'absolute',
+    backgroundColor: '#FFB16E',
+    borderWidth: 1,
+    borderColor: '#FFD8B7',
+  },
+});

@@ -1,10 +1,20 @@
 import type { Session } from '@supabase/supabase-js';
 
-import type { Profile } from '@/lib/types';
+import type { Profile, UserRole } from '@/lib/types';
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { createSelectors } from '@/lib/utils';
+
+function normalizeProfileRole(profile: Profile): Profile {
+  const raw = profile.role;
+  if (typeof raw !== 'string')
+    return profile;
+  const lower = raw.toLowerCase();
+  if (lower === 'admin' || lower === 'client' || lower === 'driver')
+    return { ...profile, role: lower as UserRole };
+  return profile;
+}
 
 type AuthState = {
   session: Session | null;
@@ -21,7 +31,7 @@ const _useAuthStore = create<AuthState>(set => ({
   profile: null,
 
   signIn: (session, profile) => {
-    set({ status: 'signIn', session, profile });
+    set({ status: 'signIn', session, profile: normalizeProfileRole(profile) });
   },
 
   signOut: async () => {
@@ -51,7 +61,11 @@ const _useAuthStore = create<AuthState>(set => ({
         return;
       }
 
-      set({ status: 'signIn', session, profile: profile as Profile });
+      set({
+        status: 'signIn',
+        session,
+        profile: normalizeProfileRole(profile as Profile),
+      });
     }
     catch {
       set({ status: 'signOut' });

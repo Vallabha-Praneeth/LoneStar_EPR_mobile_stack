@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Toggle Playground — Rive + CSS</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #181b22;
+        --text: #e7eaf0;
+        --muted: #8a93a6;
+        --accent: #4f8cff;
+        --track-off: #2a2f3a;
+        --track-on: #4f8cff;
+        --thumb: #ffffff;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background:
+          radial-gradient(1200px 600px at 10% -10%, #1a2340 0%, transparent 60%),
+          radial-gradient(900px 500px at 110% 110%, #241a3a 0%, transparent 60%),
+          var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      .page {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 20px;
+        gap: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      p.subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 20px;
+        max-width: 820px;
+        width: 100%;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid #23283280;
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        box-shadow: 0 10px 30px #00000033;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .state {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .state b { color: var(--text); }
+
+      /* ---------- CSS Toggle ---------- */
+      .toggle {
+        --w: 72px;
+        --h: 40px;
+        --p: 4px;
+        position: relative;
+        width: var(--w);
+        height: var(--h);
+        cursor: pointer;
+        user-select: none;
+      }
+      .toggle input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .toggle .track {
+        position: absolute;
+        inset: 0;
+        background: var(--track-off);
+        border-radius: 999px;
+        transition: background 220ms ease;
+        box-shadow: inset 0 1px 2px #0006;
+      }
+      .toggle .thumb {
+        position: absolute;
+        top: var(--p);
+        left: var(--p);
+        width: calc(var(--h) - var(--p) * 2);
+        height: calc(var(--h) - var(--p) * 2);
+        background: var(--thumb);
+        border-radius: 50%;
+        transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms ease;
+        box-shadow: 0 2px 6px #0008, 0 0 0 0 #4f8cff40;
+      }
+      .toggle input:checked ~ .track { background: var(--track-on); }
+      .toggle input:checked ~ .thumb {
+        transform: translateX(calc(var(--w) - var(--h)));
+        box-shadow: 0 2px 10px #0008, 0 0 0 6px #4f8cff25;
+      }
+      .toggle input:focus-visible ~ .track {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      /* ---------- Rive canvas ---------- */
+      #rive-canvas {
+        width: 140px;
+        height: 72px;
+        cursor: pointer;
+      }
+
+      footer {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 12px;
+      }
+      code {
+        background: #00000055;
+        padding: 2px 6px;
+        border-radius: 6px;
+        color: #c9d1e5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div style="text-align:center">
+        <h1>Toggle Playground</h1>
+        <p class="subtitle">Rive animation + pure CSS toggle, side by side.</p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h2>CSS Toggle</h2>
+          <label class="toggle" aria-label="CSS toggle">
+            <input id="css-toggle" type="checkbox" />
+            <span class="track"></span>
+            <span class="thumb"></span>
+          </label>
+          <div class="state">State: <b id="css-state">off</b></div>
+        </div>
+
+        <div class="card">
+          <h2>Rive Toggle</h2>
+          <canvas id="rive-canvas" width="560" height="288" role="button" aria-label="Rive toggle"></canvas>
+          <div class="state">State: <b id="rive-state">off</b></div>
+        </div>
+      </div>
+
+      <footer>
+        Served from <code>playground/</code> — click either toggle to flip it.
+      </footer>
+    </div>
+
+    <script src="https://unpkg.com/@rive-app/canvas@2.21.6"></script>
+    <script>
+      // CSS toggle state
+      const cssInput = document.getElementById("css-toggle");
+      const cssState = document.getElementById("css-state");
+      cssInput.addEventListener("change", () => {
+        cssState.textContent = cssInput.checked ? "on" : "off";
+      });
+
+      // Rive toggle
+      const riveCanvas = document.getElementById("rive-canvas");
+      const riveState = document.getElementById("rive-state");
+
+      let activeStateMachine = null;
+
+      const r = new rive.Rive({
+        src: "toggle-switch.riv",
+        canvas: riveCanvas,
+        autoplay: true,
+        onLoad: () => {
+          r.resizeDrawingSurfaceToCanvas();
+          const names = r.stateMachineNames || [];
+          console.log("[Rive] artboard:", r.activeArtboard, "SMs:", names);
+
+          // Try each state machine, activate the first one with inputs.
+          for (const name of names) {
+            const inputs = r.stateMachineInputs(name) || [];
+            console.log(`[Rive] SM "${name}" inputs:`, inputs.map((i) => ({ name: i.name, type: i.type })));
+            if (inputs.length > 0 && !activeStateMachine) {
+              activeStateMachine = name;
+              r.play(name);
+            }
+          }
+          if (!activeStateMachine && names.length > 0) {
+            activeStateMachine = names[0];
+            r.play(activeStateMachine);
+          }
+          if (!activeStateMachine) {
+            // Fall back to playing the first animation.
+            const anims = r.animationNames || [];
+            console.log("[Rive] animations:", anims);
+            if (anims.length > 0) r.play(anims[0]);
+          }
+        },
+        onLoadError: (e) => console.error("[Rive] load error", e),
+      });
+
+      // Click canvas to toggle the first boolean/trigger input we can find.
+      riveCanvas.addEventListener("click", () => {
+        if (!activeStateMachine) return;
+        const inputs = r.stateMachineInputs(activeStateMachine) || [];
+        if (inputs.length === 0) return;
+        // Prefer a boolean; fall back to firing a trigger.
+        const bool = inputs.find((i) => typeof i.value === "boolean");
+        if (bool) {
+          bool.value = !bool.value;
+          riveState.textContent = bool.value ? "on" : "off";
+          return;
+        }
+        const trigger = inputs.find((i) => typeof i.fire === "function");
+        if (trigger) {
+          trigger.fire();
+          riveState.textContent = riveState.textContent === "on" ? "off" : "on";
+        }
+      });
+
+      window.addEventListener("resize", () => r.resizeDrawingSurfaceToCanvas());
+    </script>
+  </body>
+</html>

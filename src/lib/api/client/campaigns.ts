@@ -1,10 +1,12 @@
+import type { CampaignLifecycleStatus } from '@/lib/campaign-lifecycle';
+import { deriveCampaignStatus } from '@/lib/campaign-lifecycle';
 import { supabase } from '@/lib/supabase';
 
 export type ClientCampaignRow = {
   id: string;
   title: string;
   campaign_date: string;
-  status: 'draft' | 'pending' | 'active' | 'completed';
+  status: CampaignLifecycleStatus;
   photo_count: number;
   hasActiveShift: boolean;
   activeShiftId: string | null;
@@ -30,7 +32,11 @@ export async function fetchClientCampaigns(clientId: string): Promise<ClientCamp
     id: row.id,
     title: row.title,
     campaign_date: row.campaign_date,
-    status: row.status,
+    status: deriveCampaignStatus({
+      campaignDate: row.campaign_date as string,
+      rawStatus: row.status as string,
+      shifts: (row.driver_shifts ?? []) as Array<{ started_at?: string | null; ended_at?: string | null }>,
+    }),
     photo_count: Array.isArray(row.campaign_photos) ? row.campaign_photos.length : 0,
     hasActiveShift: (row.driver_shifts ?? []).some((s: { ended_at: string | null }) => !s.ended_at),
     activeShiftId: (row.driver_shifts ?? []).find((s: { id: string; ended_at: string | null }) => !s.ended_at)?.id ?? null,

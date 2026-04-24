@@ -14,8 +14,8 @@ import {
 import { showMessage } from 'react-native-flash-message';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { JuiceAnimation } from '@/components/motion';
-import { Text, View } from '@/components/ui';
-import { Camera, ChevronLeft, ImageIcon, Upload } from '@/components/ui/icons';
+import { RiveBackButton, Text, View } from '@/components/ui';
+import { Camera, ImageIcon, Upload } from '@/components/ui/icons';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { fetchDriverCampaign } from '@/lib/api/driver/campaign';
 import { uploadPhoto } from '@/lib/api/driver/photos';
@@ -207,9 +207,7 @@ export function UploadScreen() {
         transition={{ type: 'timing', duration: motionTokens.duration.base }}
         className="flex-row items-center gap-3 border-b border-neutral-200 bg-white px-4 pt-14 pb-3 dark:border-neutral-700 dark:bg-neutral-800"
       >
-        <TouchableOpacity onPress={() => router.back()}>
-          <ChevronLeft color="#737373" width={20} height={20} />
-        </TouchableOpacity>
+        <RiveBackButton onPress={() => router.back()} />
         <View className="flex-1">
           <Text className="text-base font-semibold">Upload Photo</Text>
           {stopName

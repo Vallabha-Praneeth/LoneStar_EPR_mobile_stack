@@ -1,4 +1,5 @@
 import Env from 'env';
+import { useState } from 'react';
 import { useUniwind } from 'uniwind';
 
 import {
@@ -9,6 +10,7 @@ import {
   View,
 } from '@/components/ui';
 import { Github, Rate, Share, Support, Website } from '@/components/ui/icons';
+import { LogoutConfirmDialog } from '@/features/auth/components/logout-confirm-dialog';
 import { useAuthStore as useAuth } from '@/features/auth/use-auth-store';
 import { translate } from '@/lib/i18n';
 import { LanguageItem } from './components/language-item';
@@ -18,6 +20,7 @@ import { ThemeItem } from './components/theme-item';
 
 export function SettingsScreen() {
   const signOut = useAuth.use.signOut();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { theme } = useUniwind();
   const iconColor
     = theme === 'dark' ? colors.neutral[400] : colors.neutral[500];
@@ -81,11 +84,26 @@ export function SettingsScreen() {
 
           <View className="my-8">
             <SettingsContainer>
-              <SettingsItem text="settings.logout" onPress={signOut} />
+              <SettingsItem
+                text="settings.logout"
+                onPress={() => {
+                  setConfirmOpen(true);
+                }}
+              />
             </SettingsContainer>
           </View>
         </View>
       </ScrollView>
+      <LogoutConfirmDialog
+        visible={confirmOpen}
+        onCancel={() => {
+          setConfirmOpen(false);
+        }}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          signOut();
+        }}
+      />
     </>
   );
 }

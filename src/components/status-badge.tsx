@@ -5,6 +5,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'success' | 'danger' | 'warning
   pending: 'warning',
   active: 'success',
   completed: 'default',
+  overdue: 'danger',
 };
 
 export function StatusBadge({ status }: { status: string }) {
