@@ -60,8 +60,8 @@ importers:
         specifier: ~6.0.20
         version: 6.0.20(expo@54.0.33)
       expo-device:
-        specifier: ~8.0.10
-        version: 8.0.10(expo@54.0.33)
+        specifier: ~55.0.10
+        version: 55.0.10(expo@54.0.33)
       expo-font:
         specifier: ~14.0.11
         version: 14.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -4555,8 +4555,8 @@ packages:
     peerDependencies:
       expo: '*'
 
-  expo-device@8.0.10:
-    resolution: {integrity: sha512-jd5BxjaF7382JkDMaC+P04aXXknB2UhWaVx5WiQKA05ugm/8GH5uaz9P9ckWdMKZGQVVEOC8MHaUADoT26KmFA==}
+  expo-device@55.0.10:
+    resolution: {integrity: sha512-jvPImQg5LN7LNL57sGY6WaJxrWrPKXueUiDctZ7brLyiZfioS6wUieLwOTTkHUdtSSBtHkTvUg675w0sOzwlTg==}
     peerDependencies:
       expo: '*'
 
@@ -13723,7 +13723,7 @@ snapshots:
       expo: 54.0.33(@babel/core@7.28.6)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-dev-menu-interface: 2.0.0(expo@54.0.33)
 
-  expo-device@8.0.10(expo@54.0.33):
+  expo-device@55.0.10(expo@54.0.33):
     dependencies:
       expo: 54.0.33(@babel/core@7.28.6)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       ua-parser-js: 0.7.41
