@@ -79,9 +79,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "quantumops9@gmail.com",
-        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "REPLACE_WITH_10CHAR_TEAM_ID"
+        "appleId": "praneeth@quantum-ops.com",
+        "ascAppId": "6763707367",
+        "appleTeamId": "3JUZKG2JMY"
       },
       "android": {
         "serviceAccountKeyPath": "./secrets/play-service-account.json",
@@ -91,9 +91,9 @@
     },
     "preview": {
       "ios": {
-        "appleId": "quantumops9@gmail.com",
-        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "REPLACE_WITH_10CHAR_TEAM_ID"
+        "appleId": "praneeth@quantum-ops.com",
+        "ascAppId": "6763707367",
+        "appleTeamId": "3JUZKG2JMY"
       },
       "android": {
         "serviceAccountKeyPath": "./secrets/play-service-account.json",
