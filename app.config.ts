@@ -179,6 +179,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ['react-native-edge-to-edge'],
     'expo-asset',
     './plugins/with-kotlin-version',
+    './plugins/with-keystore-loader',
   ],
   extra: {
     eas: {
