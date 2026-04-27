@@ -180,6 +180,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-asset',
     './plugins/with-kotlin-version',
     './plugins/with-keystore-loader',
+    './plugins/with-r8-minify',
   ],
   extra: {
     eas: {
