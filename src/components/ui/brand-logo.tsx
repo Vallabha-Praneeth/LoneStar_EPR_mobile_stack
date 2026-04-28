@@ -10,6 +10,7 @@ import Svg, {
 import Rive, { Alignment, Fit } from 'rive-react-native';
 
 import { riveAssets } from '@/components/motion/rive-assets';
+import { useReducedMotion } from '@/lib/hooks/use-reduced-motion';
 
 type BrandLogoProps = {
   size?: number;
@@ -44,6 +45,7 @@ export function BrandLogo({
   size = 24,
   accessibilityLabel = 'LoneStar Fleet',
 }: BrandLogoProps) {
+  const reducedMotion = useReducedMotion();
   const radius = Math.max(10, Math.round(size * 0.38));
   const continuousCurve = Platform.OS === 'ios'
     ? ({ borderCurve: 'continuous' } as const)
@@ -86,7 +88,7 @@ export function BrandLogo({
           source={riveAssets.brandLogo}
           fit={Fit.Contain}
           alignment={Alignment.Center}
-          autoplay
+          autoplay={!reducedMotion}
           style={styles.rive}
         />
       </View>
