@@ -4,8 +4,19 @@
   },
   "settings": {
     "about": "About",
+    "account": "Account",
     "app_name": "App Name",
     "arabic": "Arabic",
+    "delete_account": {
+      "cancel": "Cancel",
+      "confirm": "Delete account",
+      "deleting": "Deleting…",
+      "dialog_body": "This permanently deactivates your account and removes your name and email from our records. Your shift history is retained anonymized for billing and audit. This cannot be undone.",
+      "dialog_confirm_prompt": "Type DELETE to confirm",
+      "dialog_title": "Delete your account?",
+      "error_generic": "Couldn't delete account. Please try again.",
+      "label": "Delete account"
+    },
     "english": "English",
     "generale": "General",
     "github": "Github",

@@ -61,6 +61,14 @@ const _useAuthStore = create<AuthState>(set => ({
         return;
       }
 
+      // Account-deletion gate: anonymized profiles flip is_active=false.
+      // Force sign-out so a stale session can't reopen a deleted account.
+      if ((profile as Profile).is_active === false) {
+        set({ status: 'signOut', session: null, profile: null });
+        await supabase.auth.signOut();
+        return;
+      }
+
       set({
         status: 'signIn',
         session,
